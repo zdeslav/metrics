@@ -7,15 +7,18 @@ the same process as your client. Just configure it and run it:
 ~~~{.cpp}
 metrics::server start_local_server(unsigned int port)
 {
-    auto on_flush = [] { dbg_print("flushing!"); };
+    // following code sets up an in-process server which outputs data
+    // to console and a file.
+    // before each flush, on_flush method is called
+    auto on_flush = [] { printf("flushing!"); };
     auto console = new console_backend();
-    auto file = new file_backend("d:\\dev\\metrics\\statsd.data");
+    auto file = new file_backend("statsd.data");
 
     auto cfg = metrics::server_config(port)
-        .pre_flush(on_flush)      // can be used for custom metrics, etc
+        .pre_flush(on_flush)      // callback can be used for custom metrics, etc
         .flush_every(10)          // flush measurements every 10 seconds
         .add_backend(console)     // send data to console for display
-        .add_backend(file)        // send data to file
+        .add_backend(file)        // and also to file
         .log("console");          // log metrics to console
 
     // returned server instance is just a proxy to the server thread, so it is
