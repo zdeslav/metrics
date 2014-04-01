@@ -2,8 +2,9 @@
 #include "metrics.h"
 #include "metrics_server.h"
 #include "windows.h"
-
+#include <fstream> 
 #include <chrono>
+#include <ctime>
 
 namespace metrics
 {
@@ -22,12 +23,26 @@ namespace metrics
         return *this;
     }
 
-    server_config& server_config::add_backend(const char* back) {
-        // todo
+    server_config& server_config::add_backend(backend* backend) {
+        if (!backend)
+        {
+            char msg[256];
+            _snprintf_s(msg, _countof(msg), _TRUNCATE, "Specified backend must not be NULL");
+            dbg_print(msg);
+            throw config_exception(msg);
+        }
+        m_backends.push_back(backend);
         return *this;
     }
 
     server_config& server_config::pre_flush(FLUSH_CALLBACK callback) {
+        if (!callback)
+        {
+            char msg[256];
+            _snprintf_s(msg, _countof(msg), _TRUNCATE, "Pre-flush callback must not be NULL");
+            dbg_print(msg);
+            throw config_exception(msg);
+        }
         m_callback = callback;
         return *this;
     }
@@ -36,23 +51,6 @@ namespace metrics
         // todo
         return *this;
     }
-
-    struct timer_data
-    {
-        std::string metric;
-        int count;
-        int max;
-        int min;
-        long long sum;
-        double avg;
-        double stddev;
-
-        void dump(const char* prefix = "")
-        {
-            dbg_print("%s%s - cnt = %d, min = %d, max = %d, sum = %lld, avg = %.2f, stddev = %.2f",
-                      prefix, metric.c_str(), count, min, max, sum, avg, stddev);
-        }
-    };
 
     timer_data process_timer(const std::string& name, std::vector<int> values)
     {
@@ -76,37 +74,39 @@ namespace metrics
         return data;
     }
 
-    void flush_metrics(unsigned int period_ms)
+    void deliver_stats(const std::vector<backend*> backends, const stats& stats)
     {
-        auto start = timer::now();
+        for (auto b : backends)
+        {
+            b->process_stats(stats);
+        }
+    }
+
+    stats flush_metrics(const storage& storage, unsigned int period_ms)
+    {
+        stats stats;
+        stats.timestamp = timer::now();
         dbg_print("processing metrics: C[%d], G[%d], H[%d]",
-                  g_storage.counters.size(), 
-                  g_storage.gauges.size(), 
-                  g_storage.timers.size());
+                  storage.counters.size(), 
+                  storage.gauges.size(), 
+                  storage.timers.size());
 
-        auto period =  period_ms / (double)CLOCKS_PER_SEC;
+        auto period =  period_ms / 1000.0;
 
-        for (auto c : g_storage.counters)
+        for (auto c : storage.counters)
         {
-            dbg_print("  C: %s - %g  1/s", c.first.c_str(), c.second / period);
+            stats.counters[c.first] = c.second / period;
         }
-        for (auto g : g_storage.gauges)
+        for (auto g : storage.gauges)
         {
-            dbg_print("  G: %s - %d  1/s", g.first.c_str(), g.second);
+            stats.gauges[g.first] = g.second;
         }
-        for (auto g : g_storage.timers)
+        for (auto t : storage.timers)
         {
-            auto data = process_timer(g.first, g.second);
-            data.dump("  H: ");
+            stats.timers[t.first] = process_timer(t.first, t.second);
         }
 
-        g_storage.clear();
-
-        // deliver();
-
-        using namespace std::chrono;
-        auto time_ms = duration_cast<milliseconds>(timer::now() - start);
-        printf("flushing took %d ms", (int)time_ms.count());
+        return stats; // todo: move
     }
 
     void process_metric(char* buff, size_t len)
@@ -158,8 +158,9 @@ namespace metrics
 
         server_config* cfg = static_cast<server_config*>(params);
         auto port = cfg->port();
-        auto period_ms = cfg->flush_period() * CLOCKS_PER_SEC;
+        auto period_ms = cfg->flush_period() * 1000;
         auto flush_cb = cfg->callback();
+        auto backends = cfg->backends();
         delete cfg;
 
         struct sockaddr_in myaddr;      // our address 
@@ -219,7 +220,11 @@ namespace metrics
             {
                 start = timer::now();
                 flush_cb();
-                flush_metrics(period_ms);
+                stats stats = flush_metrics(g_storage, period_ms);
+                g_storage.clear();
+                deliver_stats(backends, stats);
+                auto time_ms = duration_cast<milliseconds>(timer::now() - start);
+                dbg_print("flush took %d ms", (int)time_ms.count());
             }
         }
     }
@@ -238,4 +243,49 @@ namespace metrics
         const char* cmd = "stop";
         send_to_server(cmd, strlen(cmd));
     }
+
+    void console_backend::process_stats(const stats& stats)
+    {
+        for (auto c : stats.counters)
+        {
+            printf(" C: %s - %.2f 1/s\n", c.first.c_str(), c.second);
+        }
+        for (auto g : stats.gauges)
+        {
+            printf(" G: %s - %d\n", g.first.c_str(), g.second);
+        }
+        for (auto t : stats.timers)
+        {       
+            printf(" H: %s\n", t.second.dump().c_str());
+        }                          
+    }
+
+    void file_backend::process_stats(const stats& stats)
+    {
+        std::ofstream ofs;
+        ofs.open(m_filename, std::ofstream::out | std::ofstream::app);
+
+        char buff[64];
+        auto ts = timer::to_time_t(stats.timestamp);
+        ctime_s(buff, _countof(buff), &ts);
+
+        ofs << "@ " << buff << "\n";
+
+        for (auto c : stats.counters)
+        {
+            ofs << " C: " << c.first.c_str() << " - " << c.second << "1/s\n";
+        }
+        for (auto g : stats.gauges)
+        {
+            ofs << " G: " << g.first.c_str() << " - " << g.second << "\n";
+        }
+        for (auto t : stats.timers)
+        {
+            ofs << " H: " << t.second.dump() << "\n";
+        }
+        ofs << "----------------------------------------------";
+
+        ofs.close();
+    }
+
 }

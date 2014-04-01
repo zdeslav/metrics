@@ -33,11 +33,14 @@ void check_timers(int iterations);
 metrics::server start_local_server(unsigned int port)
 {
     auto on_flush = [] { dbg_print("flushing!"); };
+    auto console = new console_backend();
+    auto file = new file_backend("d:\\dev\\metrics\\statsd.data");
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // can be used for custom metrics, etc
         .flush_every(10)          // flush measurements every 10 seconds
-        .add_backend("graphite")  // send data to graphite for display
+        .add_backend(console)     // send data to console for display
+        .add_backend(file)        // send data to file
         .log("console");          // log metrics to console
 
     return server::run(cfg);
@@ -47,13 +50,14 @@ int _tmain(int argc, _TCHAR* argv[])
 {
     // setup the client
     metrics::setup_client("localhost", 12345) // point client to the server
-        .set_debug(true)                      // turn on debug tracing
+        .set_debug(false)                      // turn on debug tracing
         .set_namespace("myapp")               // specify namespace, default is "stats"
         .track_default_metrics();             // track default system and process metrics
 
     // set up an inproc server listening on port 12345, if you don't want to
     // run a separate server
     metrics::server svr = start_local_server(12345);
+    Sleep(2000); // wait a bit, until server starts spinning
 
     lengthy_function();  // perform some lengthy operation and measure it
 

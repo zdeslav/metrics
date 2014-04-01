@@ -4,6 +4,8 @@
 #include <chrono>
 #include "Winsock2.h"
 
+#pragma comment (lib, "ws2_32.lib")
+
 /// all metrics types and functions are defined inside @ref metrics namespace
 namespace metrics
 {
@@ -14,6 +16,8 @@ namespace metrics
     inline void dbg_print(const char* fmt, ...);
     void send_to_server(const char* txt, size_t len);
 
+    /// used to notify client code about errors during client or server 
+    /// configuration
     class config_exception : std::runtime_error
     {
     public:
@@ -59,9 +63,14 @@ namespace metrics
 
     /**
     * Configures metrics client.
-    * Client configuration object specifies the settings for the client 
+    * Client configuration object specifies the settings for the client. This
+    * function will try to start winsock (WSAStartup) if it finds that winsock
+    * is not already started.
+    * 
     * @param server The address of the server where metrics will be sent
     * @param port The port on which the server is listening. Default is 9999
+    * @throws config_exception Thrown if specified hostname can't be found,
+    *         or if automatic winsock startup fails.
     * 
     * Example:
     * ~~~{.cpp}

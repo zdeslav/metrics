@@ -40,14 +40,12 @@ namespace metrics
         g_client.m_server = server;
         g_client.m_port = port;
 
-        struct hostent *hp;     /* host information */
-        /* fill in the server's address and data */
+        // let's cache the server address for later use
         memset((char*)&g_client.m_svr_address, 0, sizeof(g_client.m_svr_address));
         g_client.m_svr_address.sin_family = AF_INET;
         g_client.m_svr_address.sin_port = htons(g_client.m_port);
 
-        /* look up the address of the server given its name */
-        hp = gethostbyname(g_client.m_server.c_str());
+        struct hostent* hp = gethostbyname(g_client.m_server.c_str());
         if (!hp) {
             char msg[256];
             _snprintf_s(msg, 
@@ -60,9 +58,7 @@ namespace metrics
             throw config_exception(msg);
         }
 
-        /* put the host's address into the server address structure */
         memcpy((void *)&g_client.m_svr_address.sin_addr, hp->h_addr_list[0], hp->h_length);
-
         return g_client;
     }
 
