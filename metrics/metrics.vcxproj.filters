@@ -35,7 +35,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="metro.cpp">
+    <ClCompile Include="metro_app.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="metrics.cpp">
