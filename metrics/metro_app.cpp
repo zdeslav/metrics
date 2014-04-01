@@ -36,7 +36,7 @@ metrics::server start_local_server(unsigned int port)
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // can be used for custom metrics, etc
-        .flush_each(10)           // flush measurements every 10 seconds
+        .flush_every(10)          // flush measurements every 10 seconds
         .add_backend("graphite")  // send data to graphite for display
         .log("console");          // log metrics to console
 

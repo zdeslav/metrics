@@ -29,7 +29,7 @@ namespace metrics
         * ~~~{.cpp}
         * // set up an inproc server listening on port 12345
         * auto cfg = metrics::server_config(12345)
-        *     .flush_each(30)           // flush measurements every 30 seconds
+        *     .flush_every(30)          // flush measurements every 30 seconds
         *     .pre_flush(&on_flush)     // can be used for custom metrics, etc
         *     .add_backend("graphite")  // send data to graphite for display
         *     .log("console");          // log metrics to console
@@ -43,7 +43,7 @@ namespace metrics
         * Specifies the default flush period for server. The default is 60s.
         * @param period Flush period, in seconds.
         */
-        server_config& flush_each(unsigned int period);
+        server_config& flush_every(unsigned int period);
 
         /**
         * Tells the server to run on the same thread on which server::run() was 

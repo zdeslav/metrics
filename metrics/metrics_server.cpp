@@ -15,7 +15,7 @@ namespace metrics
         ensure_winsock_started();
     }
 
-    server_config& server_config::flush_each(unsigned int period) {
+    server_config& server_config::flush_every(unsigned int period) {
         m_flush_period = period;
         return *this;
     }
