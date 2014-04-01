@@ -1,13 +1,11 @@
 Metrics             
 =======
 
-*UNDER CONSTRUCTION*
-
 Metrics is a C++ library which provides simple metrics tracking for Windows 
 applications, inspired by [statsd] metrics.
 
-It is based on [statsd protocol], and provides C++ client library for statsd 
-server, as well as server implementation.
+It is based on [statsd protocol], and provides C++ client library for statsd, 
+as well as server implementation.
 
 [statsd]: https://github.com/etsy/statsd/blob/master/docs/metric_types.md/ "statsd metrics"
 [statsd protocol]: https://github.com/b/statsd_spec
@@ -38,7 +36,7 @@ Before writing any metrics, you need to set up the client:
 Now you can start tracking the metrics.
 
 The server can easily be hosted in the same process. For more details check
-[Running the server](docs/running_server.md).
+'[Running the server](docs/running_server.md)'.
 
 ### Timers
 
@@ -85,8 +83,7 @@ void login(const char* user)
 Topics
 ------
 
-* [Overview](docs/overview.md)
-    * [How it works](docs/how_it_works.md)
-    * [Types of metrics](docs/metric_types.md)
-    * [Running the server](docs/running_server.md)
-    * [Protocol](docs/protocol.md)
+* [How it works](docs/how_it_works.md)
+* [Types of metrics](docs/metric_types.md)
+* [Running the server](docs/running_server.md)
+* [Protocol](docs/protocol.md)
