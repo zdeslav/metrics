@@ -1,0 +1,87 @@
+/* The standard CSS for doxygen 1.8.6 */
+
+body, table, div, p, dl {
+	/*font: 400 14px/22px Roboto,sans-serif;*/
+    font-family: Calibri, Verdana, Roboto, sans-serif;
+    font-size: 12pt;
+}
+
+#projectname
+{
+    font: 175% Calibri, Verdana, Roboto, sans-serif;
+}
+
+#projectbrief
+{
+	font: 120% Calibri, Verdana, Roboto, sans-serif;
+}
+
+#projectnumber
+{
+	font: 100% Calibri, Verdana, Roboto, sans-serif;
+}
+
+#projectlogo
+{
+    vertical-align: middle;
+}
+
+#projectlogo img
+{
+    height: 75%;
+}
+
+#nav-tree .label {
+font: 12pt Calibri,Verdana,Helvetica,Arial,sans-serif;
+}
+
+#side-nav {
+width: 300px;
+}
+
+span.mlabel
+{
+    font-size: 10pt;
+}
+
+tt, code, kbd, samp {
+    font-family: Consolas, Lucida Console, monospace, fixed;
+    border-radius: 3px 3px 3px 3px;
+    background-color: #FBFCFD;
+    border: 1px solid #C4CFE5;
+    font-size: 90%;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+/*
+.params .paramname, .retval .paramname
+{
+    border-radius: 3px 3px 3px 3px;
+    background-color: #FBFCFD;
+    border: 1px solid #C4CFE5;
+    padding-left: 3px;
+    padding-right: 3px;
+}*/
+
+div.fragment
+{
+    border-radius: 3px 3px 3px 3px;
+}
+
+div.line
+{
+    font-family: Consolas, Lucida Console, monospace, fixed;
+    font-size: 10.5pt;
+    min-height: 12pt;
+    line-height: 1.3;
+}
+
+.title
+{
+    font-family: Calibri, Verdana, Roboto, sans-serif;
+}
+
+.tabs, .tabs2, .tabs3 {
+    font-size: 11pt;
+    font-family: Calibri, Verdana, Roboto, sans-serif;
+}
