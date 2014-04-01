@@ -90,11 +90,22 @@ namespace metrics
     class server
     {
         server_config m_cfg;
-        server(const server_config& cfg);
+        server(const server_config& cfg) : m_cfg(cfg) { ; }
+
     public:
+        /**
+        * starts the server, based on specified configuration
+        * @param cfg Setting used by the server
+        */
         static server run(const server_config& cfg);
-        const server_config& config() const { return m_cfg; }
+
+        /**
+        * notifies the server to stop processing incoming messages. If server
+        * was configured to create a thread, the thread will exit.
+        */
         void stop();
+
+        const server_config& config() const { return m_cfg; }
     };
 
     struct storage
@@ -108,6 +119,12 @@ namespace metrics
             gauges.clear();
             timers.clear();
         }
+    };
+
+    class backend
+    {
+        virtual ~backend(){}
+
     };
 
 }

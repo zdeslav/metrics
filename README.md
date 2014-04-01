@@ -27,7 +27,7 @@ Before writing any metrics, you need to set up the client:
 
 ~~~{.cpp}
     // setup the client
-    metrics::setup_client("127.0.0.1", 9999) // point client to the server
+    metrics::setup_client("localhost", 9999) // point client to the server
         .set_debug(true)                     // turn on debug tracing
         .set_namespace("myapp")              // specify namespace, default is "stats"
         .track_default_metrics();            // track default system and process metrics

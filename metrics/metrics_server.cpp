@@ -3,6 +3,8 @@
 #include "metrics_server.h"
 #include "windows.h"
 
+#include <chrono>
+
 namespace metrics
 {
     storage g_storage;
@@ -45,10 +47,10 @@ namespace metrics
         double avg;
         double stddev;
 
-        void dump()
+        void dump(const char* prefix = "")
         {
-            dbg_print("metric %s: cnt = %d, min = %d, max = %d, sum = %llu, avg = %g, stddev = %g\n",
-                      metric.c_str(), count, min, max, sum, avg, stddev);
+            dbg_print("%s%s - cnt = %d, min = %d, max = %d, sum = %lld, avg = %.2f, stddev = %.2f",
+                      prefix, metric.c_str(), count, min, max, sum, avg, stddev);
         }
     };
 
@@ -59,7 +61,7 @@ namespace metrics
 
         data.min = values[0];
         data.max = data.min;
-        long long square_sum = 0;
+        long long square_sum = 0;  // needed for stddev
         for (auto v : values)
         {
             if (v > data.max) data.max = v;
@@ -76,8 +78,8 @@ namespace metrics
 
     void flush_metrics(unsigned int period_ms)
     {
-        auto time = clock();
-        dbg_print("processing storage: C[%d], G[%d], H[%d]\n",
+        auto start = timer::now();
+        dbg_print("processing metrics: C[%d], G[%d], H[%d]",
                   g_storage.counters.size(), 
                   g_storage.gauges.size(), 
                   g_storage.timers.size());
@@ -86,22 +88,25 @@ namespace metrics
 
         for (auto c : g_storage.counters)
         {
-            dbg_print("  C: %s - %g  1/s\n", c.first.c_str(), c.second / period);
+            dbg_print("  C: %s - %g  1/s", c.first.c_str(), c.second / period);
         }
         for (auto g : g_storage.gauges)
         {
-            dbg_print("  G: %s - %d  1/s\n", g.first.c_str(), g.second);
+            dbg_print("  G: %s - %d  1/s", g.first.c_str(), g.second);
         }
         for (auto g : g_storage.timers)
         {
             auto data = process_timer(g.first, g.second);
-            dbg_print("  H: ");
-            data.dump();
+            data.dump("  H: ");
         }
 
         g_storage.clear();
-        time = clock() - time;
-        printf("flushing took %d ms", time);
+
+        // deliver();
+
+        using namespace std::chrono;
+        auto time_ms = duration_cast<milliseconds>(timer::now() - start);
+        printf("flushing took %d ms", (int)time_ms.count());
     }
 
     void process_metric(char* buff, size_t len)
@@ -109,7 +114,7 @@ namespace metrics
         auto pipe_pos = strrchr(buff, '|');
         auto colon_pos = strrchr(buff, ':');
         if (!colon_pos || !pipe_pos) {
-            dbg_print("unknown metric: %s\n", buff);
+            dbg_print("unknown metric: %s", buff);
             return;
         }
 
@@ -119,7 +124,7 @@ namespace metrics
         else if (strcmp(pipe_pos, "|c") == 0) metric = counter;
         else if (strcmp(pipe_pos, "|ms") == 0) metric = histogram;
         else {
-            dbg_print("unknown metric type: %s\n", pipe_pos);
+            dbg_print("unknown metric type: %s", pipe_pos);
             return;
         }
 
@@ -129,7 +134,7 @@ namespace metrics
         std::string metric_name = buff;
         int value = atol(colon_pos);
 
-        dbg_print("storing metric %d: %s [%d]\n", metric, metric_name.c_str(), value);
+        dbg_print("storing metric %d: %s [%d]", metric, metric_name.c_str(), value);
 
         switch (metric)
         {
@@ -147,6 +152,8 @@ namespace metrics
 
     DWORD WINAPI ThreadProc(LPVOID params)
     {     
+        using namespace std::chrono;
+
         const int BUFSIZE = 4096;
 
         server_config* cfg = static_cast<server_config*>(params);
@@ -163,11 +170,11 @@ namespace metrics
         char buf[BUFSIZE];              // receive buffer 
 
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) { // create a UDP socket
-            dbg_print("cannot create server socket: error: %d\n", WSAGetLastError());
+            dbg_print("cannot create server socket: error: %d", WSAGetLastError());
             return 1;
         }
 
-        auto time = clock();
+        auto start = timer::now();
         /* bind the socket to any valid IP address and a specific port */
         memset((char *)&myaddr, 0, sizeof(myaddr));
         myaddr.sin_family = AF_INET;
@@ -179,8 +186,7 @@ namespace metrics
             return 1;
         }
 
-        dbg_print("inproc server listening at port %d\n", port);
-
+        dbg_print("inproc server listening at port %d", port);
         
         int maxfd = fd;
         fd_set static_rdset, rdset;
@@ -195,22 +201,23 @@ namespace metrics
 
             if (FD_ISSET(fd, &rdset)) {
                 recvlen = recvfrom(fd, buf, BUFSIZE, 0, (sockaddr*)&remaddr, &addrlen);
-                if (recvlen > 0) {
+                if (recvlen > 0 && recvlen < BUFSIZE) {
                     buf[recvlen] = 0;
                     if (strcmp(buf, "stop") == 0) {
-                        dbg_print(" > received STOP cmd, stopping server\n");
+                        dbg_print(" > received STOP cmd, stopping server");
                         return 0;
                     }
-                    dbg_print(" > received:%s (%d bytes)\n", buf, recvlen);
+                    dbg_print(" > received:%s (%d bytes)", buf, recvlen);
                     process_metric(buf, recvlen);
                 }                 
             }
 
-            auto ellapsed = clock() - time;
-            if (ellapsed >= period_ms)
+            auto ellapsed = timer::now() - start;
+            milliseconds ms = duration_cast<milliseconds>(ellapsed);
+
+            if (ms.count() >= period_ms)
             {
-                time = clock();
-                dbg_print(" > flushing metrics at %d...\n", time);
+                start = timer::now();
                 flush_cb();
                 flush_metrics(period_ms);
             }
@@ -219,18 +226,16 @@ namespace metrics
 
     server server::run(const server_config& cfg)
     {
-        dbg_print("starting inproc server....\n");
+        dbg_print("starting inproc server....");
         DWORD thread_id;
         CreateThread(NULL, 0, ThreadProc, new server_config(cfg), 0, &thread_id);
         return server(cfg);
     }
 
-    server::server(const server_config& cfg) : m_cfg(cfg) {;}
     void server::stop()
     {
-        dbg_print("sending stop cmd...\n");
+        dbg_print("sending stop cmd...");
         const char* cmd = "stop";
         send_to_server(cmd, strlen(cmd));
     }
-
 }

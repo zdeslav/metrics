@@ -1,16 +1,24 @@
 #pragma once
 
-#include <ctime>
 #include <string>
+#include <chrono>
+#include "Winsock2.h"
 
 /// all metrics types and functions are defined inside @ref metrics namespace
 namespace metrics
 {
     typedef const char* METRIC_ID;
+    typedef std::chrono::steady_clock timer;
 
     void ensure_winsock_started();
     inline void dbg_print(const char* fmt, ...);
     void send_to_server(const char* txt, size_t len);
+
+    class config_exception : std::runtime_error
+    {
+    public:
+        explicit config_exception(const char* message) : std::runtime_error(message){ ; }
+    };
 
     enum metric_type
     {
@@ -74,12 +82,13 @@ namespace metrics
     class client_config
     {
         friend client_config& setup_client(const char* server, unsigned int port);
-    public:
+
         bool m_debug;
         unsigned int m_port;
         unsigned int m_defaults_period;
         std::string m_namespace;
         std::string m_server;
+        sockaddr_in m_svr_address;
 
     public:
         client_config();
@@ -120,6 +129,9 @@ namespace metrics
         * @return String specifying the namespace.
         */
         const char* get_namespace() const;
+
+        const sockaddr_in* server_address() const { return &m_svr_address; }
+
     };
 
     extern client_config  g_client;
@@ -139,7 +151,7 @@ namespace metrics
      */
     class auto_timer
     {
-        std::clock_t m_time;
+        timer::time_point m_started_at;
         METRIC_ID m_metric;
 
     public:
@@ -181,10 +193,10 @@ namespace metrics
     *
     * ~~~ {.cpp}
     * void on_login(const char* user) {
-    *     auto time = clock();
+    *     auto time = get_time_ms();
     *     // perform login
     *     ...
-    *     metrics::measure("app.login.duration", clock() - time);
+    *     metrics::measure("app.login.duration", get_time_ms() - time);
     *     // you might want to use metrics::auto_timer to simplify this
     *     // or, even simpler, MEASURE_FN() macro
     * }

@@ -27,12 +27,12 @@ using namespace metrics;
 // todo:
 // remove log('console') - make console a backend
 
-void some_lengthy_function();
+void lengthy_function();
 void check_timers(int iterations);
 
 metrics::server start_local_server(unsigned int port)
 {
-    auto on_flush = [] { dbg_print("flushing!\n"); };
+    auto on_flush = [] { dbg_print("flushing!"); };
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // can be used for custom metrics, etc
@@ -46,7 +46,7 @@ metrics::server start_local_server(unsigned int port)
 int _tmain(int argc, _TCHAR* argv[])
 {
     // setup the client
-    metrics::setup_client("127.0.0.1", 12345) // point client to the server
+    metrics::setup_client("localhost", 12345) // point client to the server
         .set_debug(true)                      // turn on debug tracing
         .set_namespace("myapp")               // specify namespace, default is "stats"
         .track_default_metrics();             // track default system and process metrics
@@ -55,14 +55,14 @@ int _tmain(int argc, _TCHAR* argv[])
     // run a separate server
     metrics::server svr = start_local_server(12345);
 
-    some_lengthy_function();  // perform some lengthy operation and measure it
+    lengthy_function();  // perform some lengthy operation and measure it
 
     check_timers(5);
 
     Sleep(15000); // wait for flush
 
     svr.stop();  // stop the server gracefully
-	return 0;
+    return 0;
 }
 
 
@@ -70,7 +70,7 @@ void check_timers(int iterations)
 {
     srand(GetTickCount());
 
-    for (size_t i = 0; i < iterations; i++)
+    for (int i = 0; i < iterations; i++)
     {
         MEASURE_FN();
         int wait = 10 + rand() / 1000;
@@ -78,7 +78,7 @@ void check_timers(int iterations)
     }
 }
 
-void some_lengthy_function()
+void lengthy_function()
 {
     metrics::auto_timer _(lengthy_op);  // measure function duration
     MEASURE_FN(); // measure function duration. metric name is set to 'app.fn.some_lengthy_function'
