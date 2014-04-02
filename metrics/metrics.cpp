@@ -4,8 +4,6 @@
 #include "stdlib.h"
 #include <cstdarg>
 
-using timer = std::chrono::high_resolution_clock;
-
 #define thread_local __declspec( thread )
 
 namespace metrics
@@ -48,12 +46,9 @@ namespace metrics
         struct hostent* hp = gethostbyname(g_client.m_server.c_str());
         if (!hp) {
             char msg[256];
-            _snprintf_s(msg, 
-                        _countof(msg), 
-                        _TRUNCATE, 
-                        "Could not obtain address of %s. Error: %d", 
-                        g_client.m_server.c_str(),
-                        WSAGetLastError());
+            auto fmt = "Could not obtain address of %s. Error: %d";
+            auto server = g_client.m_server.c_str();
+            _snprintf_s(msg, _countof(msg), _TRUNCATE, fmt, server, WSAGetLastError());
             dbg_print(msg);
             throw config_exception(msg);
         }
@@ -85,14 +80,15 @@ namespace metrics
     bool client_config::is_debug() const { return m_debug; }
     const char* client_config::get_namespace() const { return m_namespace.c_str(); }
 
-    template <metric_type m>
-    const char* const fmt() {
-        static_assert(false, "You must provide a correct specialization");
+    const char* const fmt(metric_type m) 
+    {
+        switch (m) {
+            case histogram: return "%s.%s:%d|ms";
+            case gauge: return "%s.%s:%d|g";
+            case counter: return "%s.%s:%d|c";
+            default: throw std::runtime_error("unsupported metric type");
+        }
     }
-
-    template <> const char* const  fmt<histogram>() { return "%s.%s:%d|ms"; }
-    template <> const char* const  fmt<gauge>()     { return "%s.%s:%d|g"; }
-    template <> const char* const  fmt<counter>()   { return "%s.%s:%d|c"; }
 
     void send_to_server(const char* txt, size_t len)
     {
@@ -126,14 +122,9 @@ namespace metrics
 
     template <metric_type m>
     void signal(const char* metric, int val) {
-        char txt[256];
-        int ret = _snprintf_s(txt,
-                              _countof(txt),
-                              _TRUNCATE,
-                              fmt<m>(),
-                              g_client.get_namespace(),
-                              metric,
-                              val);
+        char txt[256]; 
+        auto ns = g_client.get_namespace();
+        int ret = _snprintf_s(txt, _countof(txt), _TRUNCATE, fmt(m), ns, metric, val);
 
         if (ret < 1) {
             dbg_print("error: metric %s didn't fit", metric);

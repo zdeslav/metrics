@@ -42,7 +42,7 @@ struct another_backend {
 
 metrics::server start_local_server(unsigned int port)
 {
-    auto on_flush = [] { dbg_print("flushing!"); };
+    auto on_flush = [] { printf("flushing!\n"); };
     console_backend console;
     file_backend file("d:\\dev\\metrics\\statsd.data");
 

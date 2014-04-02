@@ -8,8 +8,8 @@
 
 namespace metrics
 {
-    /// prototype for callback function to be called immediately before flush.
-    typedef void(*FLUSH_CALLBACK)(void);
+    /// prototype for function to be called immediately before flush.
+    typedef  std::function<void(void)> FLUSH_FN;
 
     /// a function which takes `const stats&` and returns nothing
     typedef std::function<void(const stats&)> BACKEND_FN;
@@ -21,7 +21,7 @@ namespace metrics
     {
         unsigned int m_flush_period;
         unsigned int m_port;
-        FLUSH_CALLBACK m_callback;
+        FLUSH_FN m_callback;
         std::vector<BACKEND_FN> m_backends;
 
     public:
@@ -122,9 +122,10 @@ namespace metrics
         }
 
         /**
-        * Specifies the callback function to be called before the values are
-        * flushed. You can use this to add some metrics.
-        * @param callback Callback function.
+        * Specifies the function to be called before the values are flushed.
+        * You can use this to add some metrics, etc.
+        * @param callback Callback function, lambda, functor or anything
+        * convertible to `std::function<void(void)>`.
         *
         * Example:
         * ~~~{.cpp}
@@ -135,7 +136,7 @@ namespace metrics
         * server::run(cfg);                             // start the server
         * ~~~
         */
-        server_config& pre_flush(FLUSH_CALLBACK callback);
+        server_config& pre_flush(FLUSH_FN callback);
 
         /**
         * Specifies where the debug info will be logged.
@@ -146,7 +147,7 @@ namespace metrics
 
         unsigned int flush_period() const { return m_flush_period; }
         unsigned int port() const { return m_port; }
-        FLUSH_CALLBACK callback() const { return m_callback; }
+        FLUSH_FN callback() const { return m_callback; }
         std::vector<BACKEND_FN> backends() const { return m_backends; }
     };
 
@@ -198,7 +199,7 @@ namespace metrics
         double stddev;  ///< standard deviation
 
         /// returns a string with textual description of timer data
-        std::string dump()
+        std::string dump() const
         {
             char txt[256];
             _snprintf_s(txt, _countof(txt), _TRUNCATE, 

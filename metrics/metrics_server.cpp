@@ -20,14 +20,8 @@ namespace metrics
         return *this;
     }
 
-    server_config& server_config::pre_flush(FLUSH_CALLBACK callback) {
-        if (!callback)
-        {
-            char msg[256];
-            _snprintf_s(msg, _countof(msg), _TRUNCATE, "Pre-flush callback must not be NULL");
-            dbg_print(msg);
-            throw config_exception(msg);
-        }
+    server_config& server_config::pre_flush(FLUSH_FN callback)
+    {
         m_callback = callback;
         return *this;
     }
@@ -37,7 +31,7 @@ namespace metrics
         return *this;
     }
 
-    timer_data process_timer(const std::string& name, std::vector<int> values)
+    timer_data process_timer(const std::string& name, const std::vector<int>& values)
     {
         timer_data data = { name, values.size(), 0, 0, 0, 0, 0 };   
         if (data.count == 0) return data;
@@ -45,7 +39,7 @@ namespace metrics
         data.min = values[0];
         data.max = data.min;
         long long square_sum = 0;  // needed for stddev
-        for (auto v : values)
+        for (auto& v : values)
         {
             if (v > data.max) data.max = v;
             if (v < data.min) data.min = v;
@@ -63,25 +57,12 @@ namespace metrics
     {
         stats stats;
         stats.timestamp = timer::now();
-        dbg_print("processing metrics: C[%d], G[%d], H[%d]",
-                  storage.counters.size(), 
-                  storage.gauges.size(), 
-                  storage.timers.size());
 
         auto period =  period_ms / 1000.0;
 
-        for (auto c : storage.counters)
-        {
-            stats.counters[c.first] = c.second / period;
-        }
-        for (auto g : storage.gauges)
-        {
-            stats.gauges[g.first] = g.second;
-        }
-        for (auto t : storage.timers)
-        {
-            stats.timers[t.first] = process_timer(t.first, t.second);
-        }
+        for (auto& c : storage.counters) stats.counters[c.first] = c.second / period;
+        for (auto& g : storage.gauges) stats.gauges[g.first] = g.second;
+        for (auto& t : storage.timers) stats.timers[t.first] = process_timer(t.first, t.second);
 
         return stats; // todo: move
     }
@@ -121,7 +102,7 @@ namespace metrics
             case metrics::gauge:
                 g_storage.gauges[metric_name] = value;
                 break;
-            case metrics::histogram:
+            case metrics::histogram: 
                 g_storage.timers[metric_name].push_back(value);
                 break;
         }
@@ -199,7 +180,7 @@ namespace metrics
                 flush_cb();
                 stats stats = flush_metrics(g_storage, period_ms);
                 g_storage.clear();
-                for (auto be : backends) be(stats);
+                for (auto& be : backends) be(stats);
                 auto time_ms = duration_cast<milliseconds>(timer::now() - start);
                 dbg_print("flush took %d ms", (int)time_ms.count());
             }
