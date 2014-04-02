@@ -80,12 +80,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="backends.h" />
     <ClInclude Include="metrics.h" />
     <ClInclude Include="metrics_server.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="backends.cpp" />
     <ClCompile Include="metrics.cpp" />
     <ClCompile Include="metrics_server.cpp" />
     <ClCompile Include="metro_app.cpp" />

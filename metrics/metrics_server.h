@@ -2,14 +2,19 @@
 
 #include <map>
 #include <vector>
+#include "metrics.h"
+#include "backends.h"
+#include <functional>
 
 namespace metrics
 {
     /// prototype for callback function to be called immediately before flush.
     typedef void(*FLUSH_CALLBACK)(void);
 
+    /// a function which takes `const stats&` and returns nothing
+    typedef std::function<void(const stats&)> BACKEND_FN;
+
     class server_config;
-    class backend;
 
     /// Handles settings for local server instance.
     class server_config
@@ -17,7 +22,7 @@ namespace metrics
         unsigned int m_flush_period;
         unsigned int m_port;
         FLUSH_CALLBACK m_callback;
-        std::vector<backend*> m_backends;
+        std::vector<BACKEND_FN> m_backends;
 
     public:
         /**
@@ -67,9 +72,54 @@ namespace metrics
 
         /**
         * Adds a backend for flushed stats.
-        * @param backend An instance of a backend.
+        * Backend can be anything that can be converted to `std::function<void(const stats&)>`.
+        * It can be a simple function, a lambda or an instance of a  
+        * class/structure which implements `void operator()(const stats&)`. 
+        *
+        * @param backend_instance An instance of a backend. BACKEND_FN is a 
+        *        typedef for std::function<void(const stats&)>, a function which
+        *        takes `const stats&` and returns nothing
+        *
+        * Example:
+        * ~~~{.cpp}
+        * // backend implemented as a function
+        * void simple_backend(const stats& stats) {
+        *     printf("simple backend: stats have %d timers\n", stats.timers.size() );
+        * }
+        *
+        * // backend implemented as a structure. class is also fine, just make
+        * // sure that the operator is declared as public
+        * struct another_backend {
+        *     void operator()(const stats& stats) {
+        *         printf("another backend: stats have %d timers\n", stats.timers.size() );
+        *     }
+        * };
+        *
+        * // configure server with these backends
+        * void start_local_server()
+        * {
+        *     file_backend file("statsd.data");   // built-in file backend
+        * 
+        *     auto cfg = metrics::server_config()
+        *         .flush_every(10)                // flush metrics every 10 seconds
+        *         .add_backend(&simple_backend)   // use function pointer as backend
+        *         .add_backend(another_backend()) // use an instance of a struct
+        *         .add_backend([](const stats&) { printf("!"); } ) // use a lambda
+        *         .add_backend(console_backend()) // and builtin console backend
+        *         .add_backend(file);             // and also to a file
+        *
+        *     server::run(cfg);
+        * }
+        * ~~~
+        *
+        * @see [Running the server](docs/running_server.md)
+        * @see file_backend
+        * @see console_backend
         */
-        server_config& add_backend(backend* backend);
+        server_config& add_backend(BACKEND_FN backend_instance) {
+            m_backends.push_back(backend_instance); 
+            return *this;
+        }
 
         /**
         * Specifies the callback function to be called before the values are
@@ -97,7 +147,7 @@ namespace metrics
         unsigned int flush_period() const { return m_flush_period; }
         unsigned int port() const { return m_port; }
         FLUSH_CALLBACK callback() const { return m_callback; }
-        std::vector<backend*> backends() const { return m_backends; }
+        std::vector<BACKEND_FN> backends() const { return m_backends; }
     };
 
     /// Represents a instance of the server.
@@ -136,16 +186,18 @@ namespace metrics
     };
 
 
+    /// statistic for a single timer
     struct timer_data
     {
-        std::string metric;
-        int count;
-        int max;
-        int min;
-        long long sum;
-        double avg;
-        double stddev;
+        std::string metric; ///< name of the timer
+        int count;  ///< number of entries
+        int max;  ///< maximum value of the measured sample
+        int min;  ///< minimum value of the measured sample
+        long long sum;  ///< sum of all sampled values
+        double avg;  ///< average (mean) of samples
+        double stddev;  ///< standard deviation
 
+        /// returns a string with textual description of timer data
         std::string dump()
         {
             char txt[256];
@@ -164,69 +216,4 @@ namespace metrics
         std::map<std::string, int> gauges; ///< gauge data
         std::map<std::string, timer_data> timers; ///< timer data
     };
-
-    /**
-    * Generic interface which must be implemented by all backends.
-    * Backends are registered with server_config::add_backend().
-    */
-    class backend
-    {
-    public:
-        virtual ~backend(){}
-
-        /**
-        * Must be implemented by concrete backend implementation.
-        * @param stats Contains processed metric statistics. Each backend
-        *              decides how to handle the data.
-        */
-        virtual void process_stats(const stats& stats) = 0;
-    };
-
-    /// Simple backend to dump stats to console
-    class console_backend : public backend
-    {
-    public:
-        virtual void process_stats(const stats& stats);
-    };
-
-    /// Simple backend to dump stats to file
-    class file_backend : public backend
-    {
-        std::string m_filename;
-    public:
-        file_backend(const char* filename) : m_filename(filename){ ; }
-        virtual void process_stats(const stats& stats);
-    };
-
-    /*
-    class event_log_backend : public backend
-    {
-    public:
-        event_log_backend();
-        virtual void process_stats(const stats& stats);
-    };
-
-    class graphite_backend : public backend
-    {
-    public:
-        graphite_backend(const char* host, int port);
-        virtual void process_stats(const stats& stats);
-    };
-
-    class syslog_udp_backend : public backend
-    {
-    public:
-        syslog_udp_backend(const char* host, int port);
-        virtual void process_stats(const stats& stats);
-    };
-
-    class syslog_file_backend : public backend
-    {
-        std::string m_filename;
-    public:
-        syslog_udp_backend(const char* filename) : m_filename(filename){ ; }
-        virtual void process_stats(const stats& stats);
-    };
-    */
 }
-

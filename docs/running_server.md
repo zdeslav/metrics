@@ -11,8 +11,8 @@ metrics::server start_local_server(unsigned int port)
     // to console and a file.
     // before each flush, on_flush method is called
     auto on_flush = [] { printf("flushing!"); };
-    auto console = new console_backend();
-    auto file = new file_backend("statsd.data");
+    console_backend console;
+    file_backend file("d:\\dev\\metrics\\statsd.data");
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // callback can be used for custom metrics, etc
@@ -26,4 +26,3 @@ metrics::server start_local_server(unsigned int port)
     return server::run(cfg);
 }
 ~~~
-

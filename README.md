@@ -44,9 +44,9 @@ The server can easily be hosted in the same process. For more details check
 // setting a timer
 void test_fn_0()
 {
-    auto time = clock();
+    int time = get_time_ms();
     // do something lengthy
-    metrics::measure("app.fn.duration", clock() - time);
+    metrics::measure("app.fn.duration", get_time_ms - time);
 }
 
 // simpler:

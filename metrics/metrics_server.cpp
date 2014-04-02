@@ -1,10 +1,7 @@
 #include "stdafx.h"
-#include "metrics.h"
 #include "metrics_server.h"
 #include "windows.h"
-#include <fstream> 
 #include <chrono>
-#include <ctime>
 
 namespace metrics
 {
@@ -12,26 +9,14 @@ namespace metrics
 
     server_config::server_config(unsigned int port) :
         m_port(port),
-        m_flush_period(60),
-        m_callback([]{}) // NOP callback
+        m_callback([]{}), // NOP callback
+        m_flush_period(60)
     {
         ensure_winsock_started();
     }
 
     server_config& server_config::flush_every(unsigned int period) {
         m_flush_period = period;
-        return *this;
-    }
-
-    server_config& server_config::add_backend(backend* backend) {
-        if (!backend)
-        {
-            char msg[256];
-            _snprintf_s(msg, _countof(msg), _TRUNCATE, "Specified backend must not be NULL");
-            dbg_print(msg);
-            throw config_exception(msg);
-        }
-        m_backends.push_back(backend);
         return *this;
     }
 
@@ -72,14 +57,6 @@ namespace metrics
         double var = square_sum / (double)data.count - data.avg * data.avg;
         data.stddev = sqrt(var);
         return data;
-    }
-
-    void deliver_stats(const std::vector<backend*> backends, const stats& stats)
-    {
-        for (auto b : backends)
-        {
-            b->process_stats(stats);
-        }
     }
 
     stats flush_metrics(const storage& storage, unsigned int period_ms)
@@ -222,7 +199,7 @@ namespace metrics
                 flush_cb();
                 stats stats = flush_metrics(g_storage, period_ms);
                 g_storage.clear();
-                deliver_stats(backends, stats);
+                for (auto be : backends) be(stats);
                 auto time_ms = duration_cast<milliseconds>(timer::now() - start);
                 dbg_print("flush took %d ms", (int)time_ms.count());
             }
@@ -243,49 +220,4 @@ namespace metrics
         const char* cmd = "stop";
         send_to_server(cmd, strlen(cmd));
     }
-
-    void console_backend::process_stats(const stats& stats)
-    {
-        for (auto c : stats.counters)
-        {
-            printf(" C: %s - %.2f 1/s\n", c.first.c_str(), c.second);
-        }
-        for (auto g : stats.gauges)
-        {
-            printf(" G: %s - %d\n", g.first.c_str(), g.second);
-        }
-        for (auto t : stats.timers)
-        {       
-            printf(" H: %s\n", t.second.dump().c_str());
-        }                          
-    }
-
-    void file_backend::process_stats(const stats& stats)
-    {
-        std::ofstream ofs;
-        ofs.open(m_filename, std::ofstream::out | std::ofstream::app);
-
-        char buff[64];
-        auto ts = timer::to_time_t(stats.timestamp);
-        ctime_s(buff, _countof(buff), &ts);
-
-        ofs << "@ " << buff << "\n";
-
-        for (auto c : stats.counters)
-        {
-            ofs << " C: " << c.first.c_str() << " - " << c.second << "1/s\n";
-        }
-        for (auto g : stats.gauges)
-        {
-            ofs << " G: " << g.first.c_str() << " - " << g.second << "\n";
-        }
-        for (auto t : stats.timers)
-        {
-            ofs << " H: " << t.second.dump() << "\n";
-        }
-        ofs << "----------------------------------------------";
-
-        ofs.close();
-    }
-
 }

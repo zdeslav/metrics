@@ -30,17 +30,30 @@ using namespace metrics;
 void lengthy_function();
 void check_timers(int iterations);
 
+void simple_backend(const stats& stats) { 
+    printf("simple backend: stats have %d timers\n", stats.timers.size() ); 
+}
+
+struct another_backend {
+    void operator()(const stats& stats) {
+        printf("another backend: stats have %d timers\n", stats.timers.size() ); 
+    }
+};
+
 metrics::server start_local_server(unsigned int port)
 {
     auto on_flush = [] { dbg_print("flushing!"); };
-    auto console = new console_backend();
-    auto file = new file_backend("d:\\dev\\metrics\\statsd.data");
+    console_backend console;
+    file_backend file("d:\\dev\\metrics\\statsd.data");
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // can be used for custom metrics, etc
-        .flush_every(10)          // flush measurements every 10 seconds
+        .flush_every(5)          // flush measurements every 10 seconds
         .add_backend(console)     // send data to console for display
         .add_backend(file)        // send data to file
+        .add_backend([](const stats& s){ printf("!!! %d timers\n", s.timers.size()); })
+        .add_backend(&simple_backend)
+        .add_backend(another_backend())        
         .log("console");          // log metrics to console
 
     return server::run(cfg);
@@ -62,8 +75,10 @@ int _tmain(int argc, _TCHAR* argv[])
     lengthy_function();  // perform some lengthy operation and measure it
 
     check_timers(5);
+    Sleep(8000); // wait for flush
 
-    Sleep(15000); // wait for flush
+    check_timers(5);
+    Sleep(7000); // wait for flush
 
     svr.stop();  // stop the server gracefully
     return 0;
