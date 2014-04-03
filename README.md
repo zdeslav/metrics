@@ -7,8 +7,15 @@ applications, inspired by [statsd] metrics.
 It is based on [statsd protocol], and provides C++ client library for statsd, 
 as well as server implementation.
 
+The collected metrics can be sent to various backends to analyze and process
+data. E.g. they can be displayed in [graphite] or one of its numerous
+[dashboards](http://dashboarddude.com/blog/2013/01/23/dashboards-for-graphite):
+
+![graphite showing metrics](img/stats-graph.png)
+
 [statsd]: https://github.com/etsy/statsd/blob/master/docs/metric_types.md/ "statsd metrics"
 [statsd protocol]: https://github.com/b/statsd_spec
+[graphite]: http://graphite.wikidot.com/
 
 
 Documentation
@@ -21,15 +28,25 @@ directory `build\docs\html`, just open `index.html` file.
 Usage
 -----
 
+Client application tracks metric [Types of metrics](docs/metric_types.md)
+
 ### Setting up the client
 
 Before writing any metrics, you need to set up the client:
 
 ~~~{.cpp}
     // setup the client
+    metrics::setup_client("localhost", 9999); // point client to the server
+~~~
+
+That's it, you are ready to start tracking the metrics (assuming that server is
+running). Of course, additional client settings can be specified:
+
+~~~{.cpp}
+    // setup the client, only host and port settings are required
     metrics::setup_client("localhost", 9999) // point client to the server
-        .set_debug(true)                     // turn on debug tracing
-        .set_namespace("myapp")              // specify namespace, default is "stats"
+        .set_debug(true)                     // turn on debug tracing if you need it
+        .set_namespace("myapp")              // specify metrics namespace, default is "stats"
         .track_default_metrics();            // track default system and process metrics
 ~~~
 

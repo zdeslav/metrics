@@ -2,6 +2,7 @@
 #include "metrics_server.h"
 #include "windows.h"
 #include <chrono>
+#include <memory>
 
 namespace metrics
 {
@@ -67,7 +68,7 @@ namespace metrics
         return stats; // todo: move
     }
 
-    void process_metric(char* buff, size_t len)
+    void process_metric(storage* storage, char* buff, size_t len)
     {
         auto pipe_pos = strrchr(buff, '|');
         auto colon_pos = strrchr(buff, ':');
@@ -97,13 +98,13 @@ namespace metrics
         switch (metric)
         {
             case metrics::counter:
-                g_storage.counters[metric_name] += value;
+                storage->counters[metric_name] += value;
                 break;
             case metrics::gauge:
-                g_storage.gauges[metric_name] = value;
+                storage->gauges[metric_name] = value;
                 break;
             case metrics::histogram: 
-                g_storage.timers[metric_name].push_back(value);
+                storage->timers[metric_name].push_back(value);
                 break;
         }
     }
@@ -111,21 +112,12 @@ namespace metrics
     DWORD WINAPI ThreadProc(LPVOID params)
     {     
         using namespace std::chrono;
-
         const int BUFSIZE = 4096;
+        std::unique_ptr<server_config> pcfg(static_cast<server_config*>(params));
 
-        server_config* cfg = static_cast<server_config*>(params);
-        auto port = cfg->port();
-        auto period_ms = cfg->flush_period() * 1000;
-        auto flush_cb = cfg->callback();
-        auto backends = cfg->backends();
-        delete cfg;
-
-        struct sockaddr_in myaddr;      // our address 
-        struct sockaddr_in remaddr;     // remote address 
+        sockaddr_in myaddr, remaddr;    // our address , remote address
         int addrlen = sizeof(remaddr);  // length of addresses 
-        int recvlen;                    // # bytes received 
-        int fd;                         // our socket 
+        int recvlen, fd;                // # bytes received, our socket
         char buf[BUFSIZE];              // receive buffer 
 
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) { // create a UDP socket
@@ -134,18 +126,19 @@ namespace metrics
         }
 
         auto start = timer::now();
-        /* bind the socket to any valid IP address and a specific port */
+
+        // bind the socket to any valid IP address and a specific port 
         memset((char *)&myaddr, 0, sizeof(myaddr));
         myaddr.sin_family = AF_INET;
         myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-        myaddr.sin_port = htons(port);
+        myaddr.sin_port = htons(pcfg->port());
 
         if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
             dbg_print("bind failed");
             return 1;
         }
 
-        dbg_print("inproc server listening at port %d", port);
+        dbg_print("inproc server listening at port %d", pcfg->port());
         
         int maxfd = fd;
         fd_set static_rdset, rdset;
@@ -167,20 +160,21 @@ namespace metrics
                         return 0;
                     }
                     dbg_print(" > received:%s (%d bytes)", buf, recvlen);
-                    process_metric(buf, recvlen);
+                    process_metric(&g_storage, buf, recvlen);
                 }                 
             }
 
             auto ellapsed = timer::now() - start;
             milliseconds ms = duration_cast<milliseconds>(ellapsed);
 
-            if (ms.count() >= period_ms)
+            if (ms.count() >= pcfg->flush_period_ms())
             {
                 start = timer::now();
-                flush_cb();
-                stats stats = flush_metrics(g_storage, period_ms);
+                auto& flush_fn = pcfg->flush_fn();
+                flush_fn();
+                stats stats = flush_metrics(g_storage, pcfg->flush_period_ms());
                 g_storage.clear();
-                for (auto& be : backends) be(stats);
+                for (auto& backend : pcfg->backends()) backend(stats);
                 auto time_ms = duration_cast<milliseconds>(timer::now() - start);
                 dbg_print("flush took %d ms", (int)time_ms.count());
             }
@@ -189,9 +183,10 @@ namespace metrics
 
     server server::run(const server_config& cfg)
     {
-        dbg_print("starting inproc server....");
         DWORD thread_id;
-        CreateThread(NULL, 0, ThreadProc, new server_config(cfg), 0, &thread_id);
+        HANDLE h = CreateThread(NULL, 0, ThreadProc, new server_config(cfg), 0, &thread_id);
+        if (!h) throw std::runtime_error("Failed creating server thread");
+        dbg_print("started inproc server on thread %d", thread_id);
         return server(cfg);
     }
 

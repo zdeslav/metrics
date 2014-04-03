@@ -42,15 +42,15 @@ namespace metrics
         * metrics::server start_local_server(unsigned int port)
         * {
         *     auto on_flush = [] { dbg_print("flushing!"); };
-        *     auto console = new console_backend();
-        *     auto file = new file_backend("d:\\dev\\metrics\\statsd.data");
+        *     auto console = console_backend();
+        *     auto file = file_backend("d:\\dev\\metrics\\statsd.data");
         *
         *     auto cfg = metrics::server_config(port)
-        *         .pre_flush(on_flush)      // can be used for custom metrics, etc
-        *         .flush_every(10)          // flush measurements every 10 seconds
-        *         .add_backend(console)     // send data to console for display
-        *         .add_backend(file)        // send data to file
-        *         .log("console");          // log metrics to console
+        *         .pre_flush(on_flush)  // can be used for custom metrics, etc
+        *         .flush_every(10)      // flush measurements every 10 seconds
+        *         .add_backend(console) // send data to console for display
+        *         .add_backend(file)    // send data to file
+        *         .log("console");      // log metrics to console
         *
         *     return server::run(cfg);
         * }
@@ -145,10 +145,10 @@ namespace metrics
         */
         server_config& log(const char* target);
 
-        unsigned int flush_period() const { return m_flush_period; }
+        unsigned int flush_period_ms() const { return m_flush_period * 1000; }
         unsigned int port() const { return m_port; }
-        FLUSH_FN callback() const { return m_callback; }
-        std::vector<BACKEND_FN> backends() const { return m_backends; }
+        const FLUSH_FN& flush_fn() const { return m_callback; }
+        const std::vector<BACKEND_FN>& backends() const { return m_backends; }
     };
 
     /// Represents a instance of the server.
@@ -173,6 +173,7 @@ namespace metrics
         const server_config& config() const { return m_cfg; }
     };
 
+    // storage for raw metric data. values are stored here until they are flushed
     struct storage
     {
         std::map<std::string, unsigned int> counters;
@@ -191,12 +192,12 @@ namespace metrics
     struct timer_data
     {
         std::string metric; ///< name of the timer
-        int count;  ///< number of entries
-        int max;  ///< maximum value of the measured sample
-        int min;  ///< minimum value of the measured sample
-        long long sum;  ///< sum of all sampled values
-        double avg;  ///< average (mean) of samples
-        double stddev;  ///< standard deviation
+        int count;          ///< number of entries
+        int max;            ///< maximum value of the measured sample
+        int min;            ///< minimum value of the measured sample
+        long long sum;      ///< sum of all sampled values
+        double avg;         ///< average (mean) of samples
+        double stddev;      ///< standard deviation
 
         /// returns a string with textual description of timer data
         std::string dump() const

@@ -44,11 +44,11 @@ metrics::server start_local_server(unsigned int port)
 {
     auto on_flush = [] { printf("flushing!\n"); };
     console_backend console;
-    file_backend file("d:\\dev\\metrics\\statsd.data");
+    file_backend file("d:\\statsd.data");
 
     auto cfg = metrics::server_config(port)
         .pre_flush(on_flush)      // can be used for custom metrics, etc
-        .flush_every(5)          // flush measurements every 10 seconds
+        .flush_every(10)          // flush measurements every 10 seconds
         .add_backend(console)     // send data to console for display
         .add_backend(file)        // send data to file
         .add_backend([](const stats& s){ printf("!!! %d timers\n", s.timers.size()); })
@@ -75,10 +75,10 @@ int _tmain(int argc, _TCHAR* argv[])
     lengthy_function();  // perform some lengthy operation and measure it
 
     check_timers(5);
-    Sleep(8000); // wait for flush
+    Sleep(12000); // wait for flush
 
     check_timers(5);
-    Sleep(7000); // wait for flush
+    Sleep(5000); // wait for flush
 
     svr.stop();  // stop the server gracefully
     return 0;
