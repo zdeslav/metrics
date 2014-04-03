@@ -4,6 +4,8 @@
 #include <chrono>
 #include <memory>
 
+using namespace std::chrono;
+
 namespace metrics
 {
     storage g_storage;
@@ -107,11 +109,14 @@ namespace metrics
                 storage->timers[metric_name].push_back(value);
                 break;
         }
+
+        storage->counters[builtin::internal_metrics_count]++;
+        auto ms = duration_cast<milliseconds>(timer::now().time_since_epoch());
+        storage->gauges[builtin::internal_metrics_last_seen] = ms.count();
     }
 
     DWORD WINAPI ThreadProc(LPVOID params)
     {     
-        using namespace std::chrono;
         const int BUFSIZE = 4096;
         std::unique_ptr<server_config> pcfg(static_cast<server_config*>(params));
 

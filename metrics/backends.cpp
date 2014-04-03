@@ -15,7 +15,7 @@ namespace metrics
         }
         for (auto& g : stats.gauges)
         {
-            printf(" G: %s - %d\n", g.first.c_str(), g.second);
+            printf(" G: %s - %lld\n", g.first.c_str(), g.second);
         }
         for (auto& t : stats.timers)
         {

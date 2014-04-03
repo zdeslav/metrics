@@ -78,7 +78,7 @@ int _tmain(int argc, _TCHAR* argv[])
     Sleep(12000); // wait for flush
 
     check_timers(5);
-    Sleep(5000); // wait for flush
+    Sleep(12000); // wait for flush
 
     svr.stop();  // stop the server gracefully
     return 0;

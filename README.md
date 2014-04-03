@@ -28,7 +28,9 @@ directory `build\docs\html`, just open `index.html` file.
 Usage
 -----
 
-Client application tracks metric [Types of metrics](docs/metric_types.md)
+Client application tracks metrics.
+
+[Types of metrics](docs/metric_types.md)
 
 ### Setting up the client
 
@@ -55,7 +57,11 @@ Now you can start tracking the metrics.
 The server can easily be hosted in the same process. For more details check
 '[Running the server](docs/running_server.md)'.
 
-### Timers
+### Writing metrics
+
+The library supports [3 types of metrics](docs/metric_types.md): counters, timers and gauges.
+
+#### Timers
 
 ~~~{.cpp}
 // setting a timer
@@ -82,13 +88,13 @@ void test_fn_2()
 
 ~~~
 
-### Counters
+#### Counters
 
 ~~~{.cpp}
 void login(const char* user)
 {
     metrics::increment("app.logins");
-    if(!login(user))
+    if(!try_login(user))
     {
        metrics::increment("app.logins.failed");
        ...

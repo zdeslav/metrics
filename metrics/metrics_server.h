@@ -177,7 +177,7 @@ namespace metrics
     struct storage
     {
         std::map<std::string, unsigned int> counters;
-        std::map<std::string, int> gauges;
+        std::map<std::string, long long> gauges;
         std::map<std::string, std::vector<int> > timers;
 
         void clear() {
@@ -186,7 +186,6 @@ namespace metrics
             timers.clear();
         }
     };
-
 
     /// statistic for a single timer
     struct timer_data
@@ -215,7 +214,7 @@ namespace metrics
     {
         timer::time_point timestamp;
         std::map<std::string, double> counters; ///< counter data
-        std::map<std::string, int> gauges; ///< gauge data
+        std::map<std::string, long long> gauges; ///< gauge data
         std::map<std::string, timer_data> timers; ///< timer data
     };
 }

@@ -33,6 +33,9 @@ namespace metrics
 
     /// lists all the default metrics, which can be automatically tracked
     namespace builtin {
+        const char internal_metrics_count[] = "metrics.internal.count"; ///< Number of metrics tracked
+        const char internal_metrics_last_seen[] = "metrics.internal.last_seen"; ///< timestamp of last metric
+
         // GlobalMemoryStatusEx, GetPerformanceInfo, GetSystemTimes 
         const char sys_mem_phys_used[] = "sys.mem.phys.total"; ///< Total physical memory
         const char sys_mem_phys_free[] = "sys.mem.phys.free";  ///< Physical memory available 
