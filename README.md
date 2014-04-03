@@ -11,7 +11,7 @@ The collected metrics can be sent to various backends to analyze and process
 data. E.g. they can be displayed in [graphite] or one of its numerous
 [dashboards](http://dashboarddude.com/blog/2013/01/23/dashboards-for-graphite):
 
-![graphite showing metrics](img/stats-graph.png)
+![graphite showing metrics](docs/img/stats-graph.png)
 
 [statsd]: https://github.com/etsy/statsd/blob/master/docs/metric_types.md/ "statsd metrics"
 [statsd protocol]: https://github.com/b/statsd_spec
