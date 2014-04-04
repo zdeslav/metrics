@@ -1,7 +1,7 @@
-Metrics             
-=======
+Metric++
+========
 
-Metrics is a C++ library which provides simple metrics tracking for Windows 
+Metric++ is a C++ library which provides simple metrics tracking for Windows 
 applications, inspired by [statsd] metrics.
 
 It is based on [statsd protocol], and provides C++ client library for statsd, 
