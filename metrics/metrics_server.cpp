@@ -1,10 +1,7 @@
 #include "stdafx.h"
 #include "metrics_server.h"
 #include "windows.h"
-#include <chrono>
 #include <memory>
-
-using namespace std::chrono;
 
 namespace metrics
 {
@@ -42,7 +39,7 @@ namespace metrics
         data.min = values[0];
         data.max = data.min;
         long long square_sum = 0;  // needed for stddev
-        for (auto& v : values)
+        FOR_EACH (auto& v, values)
         {
             if (v > data.max) data.max = v;
             if (v < data.min) data.min = v;
@@ -63,9 +60,9 @@ namespace metrics
 
         auto period =  period_ms / 1000.0;
 
-        for (auto& c : storage.counters) stats.counters[c.first] = c.second / period;
-        for (auto& g : storage.gauges) stats.gauges[g.first] = g.second;
-        for (auto& t : storage.timers) stats.timers[t.first] = process_timer(t.first, t.second);
+        FOR_EACH (auto& c, storage.counters) stats.counters[c.first] = c.second / period;
+        FOR_EACH (auto& g, storage.gauges) stats.gauges[g.first] = g.second;
+        FOR_EACH (auto& t, storage.timers) stats.timers[t.first] = process_timer(t.first, t.second);
 
         return stats; // todo: move
     }
@@ -111,8 +108,7 @@ namespace metrics
         }
 
         storage->counters[builtin::internal_metrics_count]++;
-        auto ms = duration_cast<milliseconds>(timer::now().time_since_epoch());
-        storage->gauges[builtin::internal_metrics_last_seen] = ms.count();
+        storage->gauges[builtin::internal_metrics_last_seen] = timer::now();
     }
 
     DWORD WINAPI ThreadProc(LPVOID params)
@@ -169,19 +165,15 @@ namespace metrics
                 }                 
             }
 
-            auto ellapsed = timer::now() - start;
-            milliseconds ms = duration_cast<milliseconds>(ellapsed);
-
-            if (ms.count() >= pcfg->flush_period_ms())
+            if (timer::since(start) >= pcfg->flush_period_ms())
             {
                 start = timer::now();
                 auto& flush_fn = pcfg->flush_fn();
                 flush_fn();
                 stats stats = flush_metrics(g_storage, pcfg->flush_period_ms());
                 g_storage.clear();
-                for (auto& backend : pcfg->backends()) backend(stats);
-                auto time_ms = duration_cast<milliseconds>(timer::now() - start);
-                dbg_print("flush took %d ms", (int)time_ms.count());
+                FOR_EACH (auto& backend, pcfg->backends()) backend(stats);
+                dbg_print("flush took %d ms", timer::since(start));
             }
         }
     }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <chrono>
 #include "Winsock2.h"
 
 #pragma comment (lib, "ws2_32.lib")
@@ -10,12 +9,28 @@
 namespace metrics
 {
     typedef const char* METRIC_ID;
-    typedef std::chrono::steady_clock timer;
 
     void ensure_winsock_started();
     inline void dbg_print(const char* fmt, ...);
     void send_to_server(const char* txt, size_t len);
 
+    // 1700 is VS2012  - VS2010 doesn't support official range based for loop
+    #if _MSC_VER < 1700
+    #define FOR_EACH(var , range) for each(var in range)
+    #else
+    #define FOR_EACH(var , range) for (var : range)
+    #endif
+
+    // used as a workaround for the fact that VS2010 doesn't support std::chrono
+    class timer 
+    {
+    public:
+        typedef int time_point;  // todo: ULONGLONG, int is limited to ~50 days
+        typedef int duration;
+        static time_point now();
+        static duration since(int when);
+        static std::string to_string(timer::time_point time);
+    };
     /// used to notify client code about errors during client or server 
     /// configuration
     class config_exception : std::runtime_error

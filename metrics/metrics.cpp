@@ -31,6 +31,29 @@ namespace metrics
         }
     }
 
+
+    timer::time_point timer::now(){ return GetTickCount(); }
+    timer::duration timer::since(int when){ return now() - when; }
+    std::string timer::to_string(timer::time_point time)
+    { 
+        FILETIME tm;
+        GetSystemTimeAsFileTime(&tm);
+        auto diff = now() - time;
+
+        _ULARGE_INTEGER ui;
+        ui.LowPart = tm.dwLowDateTime;
+        ui.HighPart = tm.dwHighDateTime;
+        ui.QuadPart = ui.QuadPart - diff * 10000;
+        tm.dwLowDateTime = ui.LowPart;
+        tm.dwHighDateTime = ui.HighPart;
+        SYSTEMTIME st;
+        FileTimeToSystemTime(&tm, &st);
+        char txt[256];
+        sprintf_s(txt, "%04d-%02d-%02dT%02d:%02d:%02d.%03d",
+                st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+        return txt;
+    }
+
     client_config& setup_client(const char* server, unsigned int port)
     {
         ensure_winsock_started();
@@ -136,12 +159,7 @@ namespace metrics
     }
 
     auto_timer::auto_timer(METRIC_ID metric) : m_metric(metric), m_started_at(timer::now()) {}
-    auto_timer::~auto_timer() 
-    {
-        using namespace std::chrono;
-        auto ms = duration_cast<milliseconds>(timer::now() - m_started_at);
-        signal<histogram>(m_metric, (int)ms.count()); 
-    }
+    auto_timer::~auto_timer() { signal<histogram>(m_metric, timer::since(m_started_at)); }
 
     void increment(METRIC_ID metric, int inc)
     {
