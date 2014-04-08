@@ -104,8 +104,8 @@ void lengthy_function()
 
     // do something that takes time....
     // start tracking measurements
-    metrics::increment(metrics::auth_req_count);              // counter
-    metrics::measure(metrics::builtin::sys_cpu_load, 42);     // histogram/timer
-    metrics::set(metrics::builtin::sys_disk_free_c, 1543);    // gauge
+    metrics::inc(metrics::auth_req_count);                 // counter
+    metrics::measure(metrics::builtin::sys_cpu_load, 42);  // histogram/timer
+    metrics::set(metrics::builtin::sys_disk_free_c, 1543); // gauge
 
 }

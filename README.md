@@ -93,10 +93,10 @@ void test_fn_2()
 ~~~{.cpp}
 void login(const char* user)
 {
-    metrics::increment("app.logins");
-    if(!try_login(user))
+    metrics::inc("app.logins");           // increment login counter.
+    if(!try_login(user))                  // in case of login error...
     {
-       metrics::increment("app.logins.failed");
+       metrics::inc("app.logins.failed"); // ...increment counter of failed logins
        ...
     }
 }   

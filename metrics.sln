@@ -7,12 +7,18 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "metrics", "metrics\metrics.
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_2010|Win32 = Debug_2010|Win32
 		Debug|Win32 = Debug|Win32
+		Release_2010|Win32 = Release_2010|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{84923870-0253-4348-912A-E7417381399D}.Debug_2010|Win32.ActiveCfg = Debug_2010|Win32
+		{84923870-0253-4348-912A-E7417381399D}.Debug_2010|Win32.Build.0 = Debug_2010|Win32
 		{84923870-0253-4348-912A-E7417381399D}.Debug|Win32.ActiveCfg = Debug|Win32
 		{84923870-0253-4348-912A-E7417381399D}.Debug|Win32.Build.0 = Debug|Win32
+		{84923870-0253-4348-912A-E7417381399D}.Release_2010|Win32.ActiveCfg = Release_2010|Win32
+		{84923870-0253-4348-912A-E7417381399D}.Release_2010|Win32.Build.0 = Release_2010|Win32
 		{84923870-0253-4348-912A-E7417381399D}.Release|Win32.ActiveCfg = Release|Win32
 		{84923870-0253-4348-912A-E7417381399D}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection

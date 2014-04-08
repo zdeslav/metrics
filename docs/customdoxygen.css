@@ -53,6 +53,20 @@ tt, code, kbd, samp {
     padding-left: 3px;
     padding-right: 3px;
 }
+
+span.comment {
+    color: #595;
+    /*font-style: italic;*/
+}
+
+span.keyword, span.keywordflow {
+    color: #56A;
+}
+
+span.stringliteral {
+    color: #a00;
+}
+
 /*
 .params .paramname, .retval .paramname
 {

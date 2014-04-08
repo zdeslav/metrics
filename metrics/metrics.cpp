@@ -161,7 +161,7 @@ namespace metrics
     auto_timer::auto_timer(METRIC_ID metric) : m_metric(metric), m_started_at(timer::now()) {}
     auto_timer::~auto_timer() { signal<histogram>(m_metric, timer::since(m_started_at)); }
 
-    void increment(METRIC_ID metric, int inc)
+    void inc(METRIC_ID metric, int inc)
     {
         signal<counter>(metric, inc);
     }

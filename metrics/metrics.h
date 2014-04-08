@@ -202,15 +202,15 @@ namespace metrics
     *
     * ~~~ {.cpp}
     * void on_login(const char* user) {
-    *     metrics::increment("app.logins");
+    *     metrics::inc("app.logins");
     *     if (!login(user)) {
-    *        metrics::increment("app.logins.failed");
+    *        metrics::inc("app.logins.failed");
     *        ...
     *     }
     * }   
     * ~~~
     */
-    void increment(METRIC_ID metric, int inc = 1);
+    void inc(METRIC_ID metric, int inc = 1);
 
     /**
     *  Sets the specified timer/histogram metric
