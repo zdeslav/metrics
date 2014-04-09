@@ -16,6 +16,19 @@ namespace metrics
         gauge_delta
     };
 
+    struct SOCK_ADDR_IN : public sockaddr_in {
+        SOCK_ADDR_IN() {
+            memset((char *)this, 0, sizeof(SOCK_ADDR_IN));
+        }
+
+        SOCK_ADDR_IN(int family, unsigned long addr, int port) {
+            memset((char *)this, 0, sizeof(SOCK_ADDR_IN));
+            sin_family = family;
+            sin_addr.s_addr = htonl(addr);
+            sin_port = htons(port);
+        }
+    };
+
     typedef const char* METRIC_ID;
 
     void ensure_winsock_started();
@@ -116,7 +129,7 @@ namespace metrics
         unsigned int m_defaults_period;
         std::string m_namespace;
         std::string m_server;
-        sockaddr_in m_svr_address;
+        SOCK_ADDR_IN m_svr_address;
 
     public:
         client_config();

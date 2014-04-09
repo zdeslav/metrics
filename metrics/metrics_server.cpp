@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "metrics_server.h"
-#include "windows.h"
 #include <memory>
 
 namespace metrics
@@ -31,11 +30,6 @@ namespace metrics
     server_config& server_config::add_server_listener(SERVER_NOTIFICATION_FN callback)
     {
         m_server_cbs.push_back(callback);
-        return *this;
-    }
-
-    server_config& server_config::log(const char* target) {
-        // todo
         return *this;
     }
 
@@ -130,8 +124,6 @@ namespace metrics
         const int BUFSIZE = 4096;
         std::unique_ptr<server_config> pcfg(static_cast<server_config*>(params));
 
-        sockaddr_in myaddr, remaddr;    // our address , remote address
-        int addrlen = sizeof(remaddr);  // length of addresses 
         int recvlen, fd;                // # bytes received, our socket
         char buf[BUFSIZE];              // receive buffer 
 
@@ -141,13 +133,8 @@ namespace metrics
             return 1;
         }
 
-        auto start = timer::now();
-
-        // bind the socket to any valid IP address and a specific port 
-        memset((char *)&myaddr, 0, sizeof(myaddr));
-        myaddr.sin_family = AF_INET;
-        myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-        myaddr.sin_port = htons(pcfg->port());
+        auto start = timer::now();         
+        SOCK_ADDR_IN myaddr(AF_INET, INADDR_ANY, pcfg->port());
 
         if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
             dbg_print("bind failed, error: %d", WSAGetLastError());
@@ -160,6 +147,8 @@ namespace metrics
         
         int maxfd = fd;
         fd_set static_rdset, rdset;
+        SOCK_ADDR_IN remaddr;  
+        int addrlen = sizeof(remaddr);  // length of addresses 
         timeval timeout = { 0, 250000 };
 
         FD_ZERO(&static_rdset);

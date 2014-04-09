@@ -5,15 +5,6 @@
 
 class fake_server
 {
-    struct SOCK_ADDR_IN : public sockaddr_in {
-        SOCK_ADDR_IN(int family, unsigned long addr, int port) {      
-            memset((char *)this, 0, sizeof(*this));
-            sin_family = family;
-            sin_addr.s_addr = htonl(addr);
-            sin_port = htons(port);
-        }
-    };
-
     SOCKET m_sock;
 
 public:
@@ -23,7 +14,7 @@ public:
             throw std::runtime_error("cannot create server socket");
         }
 
-        SOCK_ADDR_IN myaddr(AF_INET, INADDR_LOOPBACK, port);
+        metrics::SOCK_ADDR_IN myaddr(AF_INET, INADDR_LOOPBACK, port);
 
         if (bind(m_sock, (sockaddr*)&myaddr, sizeof(myaddr)) < 0) {
             closesocket(m_sock);

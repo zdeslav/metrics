@@ -63,8 +63,7 @@ namespace metrics
         *         .pre_flush(on_flush)  // can be used for custom metrics, etc
         *         .flush_every(10)      // flush measurements every 10 seconds
         *         .add_backend(console) // send data to console for display
-        *         .add_backend(file)    // send data to file
-        *         .log("console");      // log metrics to console
+        *         .add_backend(file);   // send data to file
         *
         *     return server::run(cfg);
         * }
@@ -170,13 +169,6 @@ namespace metrics
         * ~~~
         */
         server_config& add_server_listener(SERVER_NOTIFICATION_FN callback);
-
-        /**
-        * Specifies where the debug info will be logged.
-        * @param target Output target: "console", ...
-        * @todo *NOT IMPLEMENTED YET*
-        */
-        server_config& log(const char* target);
 
         unsigned int flush_period_ms() const { return m_flush_period * 1000; }
         unsigned int port() const { return m_port; }

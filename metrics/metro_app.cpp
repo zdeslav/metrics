@@ -24,9 +24,6 @@ namespace metrics {
 
 using namespace metrics;
 
-// todo:
-// remove log('console') - make console a backend
-
 void lengthy_function();
 void check_timers(int iterations);
 
@@ -43,18 +40,22 @@ struct another_backend {
 metrics::server start_local_server(unsigned int port)
 {
     auto on_flush = [] { printf("flushing!\n"); };
+    auto on_server_info = [](server_events e) { 
+        printf(e == Started ? "server started\n" : "server stopped\n");
+    };
+
     console_backend console;
     file_backend file("d:\\statsd.data");
 
     auto cfg = metrics::server_config(port)
+        .add_server_listener(on_server_info) // get notified on start/stop/error
         .pre_flush(on_flush)      // can be used for custom metrics, etc
         .flush_every(10)          // flush measurements every 10 seconds
         .add_backend(console)     // send data to console for display
         .add_backend(file)        // send data to file
         .add_backend([](const stats& s){ printf("!!! %d timers\n", s.timers.size()); })
         .add_backend(&simple_backend)
-        .add_backend(another_backend())        
-        .log("console");          // log metrics to console
+        .add_backend(another_backend());          
 
     return server::run(cfg);
 }
