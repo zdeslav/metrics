@@ -204,24 +204,6 @@ TEST(ServerTest, CounterProcessing) {
     EXPECT_EQ(0, store.timers.size());
 }
 
-/*
-stats flush_metrics(const storage& storage, unsigned int period_ms)
-{
-stats stats;
-stats.timestamp = timer::now();
-
-auto period =  period_ms / 1000.0;
-
-FOR_EACH (auto& c, storage.counters) stats.counters[c.first] = c.second / period;
-FOR_EACH (auto& g, storage.gauges) stats.gauges[g.first] = g.second;
-FOR_EACH (auto& t, storage.timers) stats.timers[t.first] = process_timer(t.first, t.second);
-
-return stats; // todo: move
-}
-
-*/
-
-
 bool operator == (const metrics::timer_data& lhs, const metrics::timer_data& rhs)
 {
     return lhs.count == rhs.count

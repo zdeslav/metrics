@@ -5,10 +5,8 @@
 
 class fake_server
 {
-    struct SOCK_ADDR_IN : public sockaddr_in
-    {
-        SOCK_ADDR_IN(int family, unsigned long addr, int port)
-        {      
+    struct SOCK_ADDR_IN : public sockaddr_in {
+        SOCK_ADDR_IN(int family, unsigned long addr, int port) {      
             memset((char *)this, 0, sizeof(*this));
             sin_family = family;
             sin_addr.s_addr = htonl(addr);
@@ -17,7 +15,7 @@ class fake_server
     };
 
     SOCKET m_sock;
-    std::vector<std::string> m_messages;
+
 public:
     fake_server(int port = 9999)
     {
@@ -37,9 +35,10 @@ public:
         closesocket(m_sock);
     }
 
-    void pump_messages(bool reset_messages = true, int timeout_ms = 1000)
+    std::vector<std::string> get_messages(bool reset_messages = true, int timeout_ms = 1000)
     {
-        m_messages.clear();
+        std::vector<std::string> messages;
+
         sockaddr_in remaddr;
         int addrlen = sizeof(remaddr);
         const int BUFSIZE = 4096;
@@ -53,19 +52,18 @@ public:
 
         while (true) {
             rdset = static_rdset;
-            if (0 == select(maxfd + 1, &rdset, NULL, NULL, &timeout)) return;  // timeout
+            if (0 == select(maxfd + 1, &rdset, NULL, NULL, &timeout)) break;  // timeout
 
             if (FD_ISSET(m_sock, &rdset)) {
                 int recvlen = recvfrom(m_sock, buf, BUFSIZE, 0, (sockaddr*)&remaddr, &addrlen);
                 if (recvlen > 0 && recvlen < BUFSIZE) {
                     buf[recvlen] = 0;
-                    m_messages.push_back(buf);
+                    messages.push_back(buf);
                 }
             }
         }
+        return messages;
     }
-
-    std::vector<std::string> messages() const { return m_messages; }
 };
 
 TEST(ClientTest, CheckClientSettings) {
@@ -91,21 +89,17 @@ TEST(ClientTest, CheckClientApi) {
     metrics::setup_client("127.0.0.1");
     fake_server svr;
 
-    metrics::inc("counter");  
-    svr.pump_messages();
-    EXPECT_EQ("stats.counter:1|c", svr.messages()[0]);
-
+    metrics::inc("counter");
     metrics::inc("counter", 4);
-    svr.pump_messages();
-    EXPECT_EQ("stats.counter:4|c", svr.messages()[0]);
-
     metrics::set("gauge", 17);
-    svr.pump_messages();
-    EXPECT_EQ("stats.gauge:17|g", svr.messages()[0]);
-
     metrics::measure("timer", 22);
-    svr.pump_messages();
-    EXPECT_EQ("stats.timer:22|ms", svr.messages()[0]);
+
+    auto messages = svr.get_messages();
+
+    EXPECT_EQ("stats.counter:1|c", messages[0]);
+    EXPECT_EQ("stats.counter:4|c", messages[1]);
+    EXPECT_EQ("stats.gauge:17|g", messages[2]);
+    EXPECT_EQ("stats.timer:22|ms", messages[3]);
 }
 
 namespace metrics
@@ -123,10 +117,10 @@ TEST(ClientTest, AutoTimer) {
         while (metrics::timer::now() - ts < 50); // wait ~50 ms
     }
 
-    svr.pump_messages();
+    auto messages = svr.get_messages();
 
     char txt[512];
-    strcpy_s(txt, svr.messages()[0].c_str());
+    strcpy_s(txt, messages[0].c_str());
 
     metrics::storage store;
     metrics::process_metric(&store, txt, strlen(txt));
@@ -153,11 +147,9 @@ TEST(ClientTest, FunctionTimer) {
     measured_fn(20);
     measured_fn(50);
 
-    svr.pump_messages();
-
     metrics::storage store;
 
-    FOR_EACH(auto& msg, svr.messages())
+    FOR_EACH(auto& msg, svr.get_messages())
     {
         char txt[512];
         strcpy_s(txt, msg.c_str());
