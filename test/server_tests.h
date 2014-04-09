@@ -70,7 +70,8 @@ void wait_until_flush(int timeout_ms = 3000)
 }
 
 TEST(ServerTest, TimerDataCalculation) {
-    std::vector<int> values = { 17, 13, 15, 16, 18 };
+    int arr[] = { 17, 13, 15, 16, 18 }; // VS2010 doesn't support initializer lists
+    std::vector<int> values(std::begin(arr), std::end(arr));
     metrics::timer_data data = metrics::process_timer("test.timer", values);
 
     EXPECT_EQ("test.timer", data.metric);
@@ -232,6 +233,11 @@ bool operator == (const metrics::timer_data& lhs, const metrics::timer_data& rhs
 }
 
 TEST(ServerTest, Flushing) {
+    int arr1[] = { 17, 13, 15, 16, 18 }; // VS2010 doesn't support initializer lists
+    int arr2[] = { 1, 2, 3 };
+    auto vec1 = std::vector<int>(std::begin(arr1), std::end(arr1));
+    auto vec2 = std::vector<int>(std::begin(arr2), std::end(arr2));
+    
     metrics::storage store;
 
     store.counters["c.1"] = 5;
@@ -240,8 +246,8 @@ TEST(ServerTest, Flushing) {
     store.gauges["g.1"] = 42;
     store.gauges["g.2"] = 999;
 
-    store.timers["t.1"] = { 17, 13, 15, 16, 18 };
-    store.timers["t.2"] = { 1, 2, 3};
+    store.timers["t.1"] = vec1;
+    store.timers["t.2"] = vec2;
 
     auto stats = metrics::flush_metrics(store, 10000);
 
@@ -251,8 +257,8 @@ TEST(ServerTest, Flushing) {
     EXPECT_EQ(42, stats.gauges["g.1"]);
     EXPECT_EQ(999, stats.gauges["g.2"]);
 
-    auto td1 = metrics::process_timer("t.1", { 17, 13, 15, 16, 18 } );
-    auto td2 = metrics::process_timer("t.2", { 1, 2, 3 });
+    auto td1 = metrics::process_timer("t.1", vec1);
+    auto td2 = metrics::process_timer("t.2", vec2);
 
     EXPECT_TRUE(td1 == stats.timers["t.1"]);
     EXPECT_TRUE(td2 == stats.timers["t.2"]);
