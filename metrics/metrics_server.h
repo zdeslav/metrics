@@ -60,7 +60,7 @@ namespace metrics
 
         /**
         * Specifies the default flush period for server. The default is 60s.
-        * @param period Flush period, in seconds.
+        * @param period Flush period, in seconds. Valid values are [1,3600]
         */
         server_config& flush_every(unsigned int period);
 

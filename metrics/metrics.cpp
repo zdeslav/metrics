@@ -54,8 +54,10 @@ namespace metrics
         return txt;
     }
 
-    client_config& setup_client(const char* server, unsigned int port)
+    client_config& setup_client(const std::string& server, unsigned int port)
     {
+        if (server.size() < 1)  throw config_exception("specified server can't be an empty string");
+
         ensure_winsock_started();
 
         g_client.m_server = server;
@@ -92,10 +94,11 @@ namespace metrics
         return *this;
     }
     client_config& client_config::track_default_metrics(unsigned int period) {
+        if (period < 1)  throw config_exception("specified period must be greater than 0");
         m_defaults_period = period;
         return *this;
     }
-    client_config& client_config::set_namespace(const char* ns) {
+    client_config& client_config::set_namespace(const std::string& ns) {
         m_namespace = ns;
         return *this;
     }

@@ -85,7 +85,7 @@ namespace metrics
     * function will try to start winsock (WSAStartup) if it finds that winsock
     * is not already started.
     * 
-    * @param server The address of the server where metrics will be sent
+    * @param server The address/name of the server where metrics will be sent
     * @param port The port on which the server is listening. Default is 9999
     * @throws config_exception Thrown if specified hostname can't be found,
     *         or if automatic winsock startup fails.
@@ -101,14 +101,14 @@ namespace metrics
     *
     * @see client_config
     */
-    client_config& setup_client(const char* server, unsigned int port = 9999);
+    client_config& setup_client(const std::string& server, unsigned int port = 9999);
 
     /**
     * handles client settings.
     */
     class client_config
     {
-        friend client_config& setup_client(const char* server, unsigned int port);
+        friend client_config& setup_client(const std::string& server, unsigned int port);
 
         bool m_debug;
         unsigned int m_port;
@@ -135,7 +135,8 @@ namespace metrics
         * metrics::builtin namespace
         *
         * @param period How often, in seconds, will default metrics be collected.
-        *               The default value is 45 seconds.
+        *               The default value is 45 seconds, valid values are > 0.
+        * @throws config_exception Thrown if period is set to 0
         */
         client_config& track_default_metrics(unsigned int period = 45);
 
@@ -143,7 +144,7 @@ namespace metrics
         * Specifies the namespace to be used for metrics. The default is "stats"
         * @param ns New namespace to be used
         */
-        client_config& set_namespace(const char* ns);
+        client_config& set_namespace(const std::string& ns);
 
         /**
         * Returns whether the debug tracing is active

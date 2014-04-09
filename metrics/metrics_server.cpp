@@ -16,6 +16,8 @@ namespace metrics
     }
 
     server_config& server_config::flush_every(unsigned int period) {
+        if (period < 1 || period > 3600) throw config_exception("Valid flush period is 1-3600 s");
+
         m_flush_period = period;
         return *this;
     }
@@ -135,7 +137,8 @@ namespace metrics
         myaddr.sin_port = htons(pcfg->port());
 
         if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
-            dbg_print("bind failed");
+            dbg_print("bind failed, error: %d", WSAGetLastError());
+            closesocket(fd);
             return 1;
         }
 
@@ -158,6 +161,7 @@ namespace metrics
                     buf[recvlen] = 0;
                     if (strcmp(buf, "stop") == 0) {
                         dbg_print(" > received STOP cmd, stopping server");
+                        closesocket(fd);
                         return 0;
                     }
                     dbg_print(" > received:%s (%d bytes)", buf, recvlen);

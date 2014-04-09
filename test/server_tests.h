@@ -11,6 +11,22 @@ namespace metrics
     stats flush_metrics(const storage& storage, unsigned int period_ms);
     void process_metric(storage* storage, char* buff, size_t len);
 }
+metrics::server start(const metrics::server_config& cfg)
+{
+    auto svr = metrics::server::run(cfg);
+    auto ts = metrics::timer::now();          
+    // wait a bit until it spins up (hopefully)
+    // todo: add a callback to denote that server has started/stopped
+    while (metrics::timer::now() - ts < 100); 
+    return svr;
+}
+
+void stop(metrics::server& svr)
+{
+    svr.stop();
+    auto ts = metrics::timer::now();
+    while (metrics::timer::now() - ts < 100); // wait a bit until it stops
+}
 
 TEST(ServerTest, TimerDataCalculation) {
     std::vector<int> values = { 17, 13, 15, 16, 18 };
@@ -202,3 +218,63 @@ TEST(ServerTest, Flushing) {
     EXPECT_TRUE(td1 == stats.timers["t.1"]);
     EXPECT_TRUE(td2 == stats.timers["t.2"]);
 }
+
+TEST(ServerTest, PreFlushCalled) {
+    bool flush_called = false;
+    auto cfg = metrics::server_config()
+        .flush_every(1)
+        .pre_flush([&](){ flush_called = true; });
+
+    auto svr = start(cfg);
+    auto ts = metrics::timer::now();
+    while (!flush_called && metrics::timer::now() - ts < 3000);
+    stop(svr);
+    EXPECT_TRUE(flush_called);
+}
+
+TEST(ServerTest, CheckConfigSettings) {
+    auto cfg = metrics::server_config();
+
+    EXPECT_THROW(cfg.flush_every(0), metrics::config_exception);
+    EXPECT_NO_THROW(cfg.flush_every(1));
+    EXPECT_NO_THROW(cfg.flush_every(3600));
+    EXPECT_THROW(cfg.flush_every(3601), metrics::config_exception);
+}
+
+TEST(ServerTest, NamespaceIsUsed) {
+    std::string received_metric;
+
+    auto backend = [&](const metrics::stats& s){ 
+        if (!s.timers.empty()) received_metric = s.timers.cbegin()->first;
+    };
+
+    auto cfg = metrics::server_config().add_backend(backend).flush_every(1);
+    auto svr = start(cfg);
+    
+    metrics::setup_client("127.0.0.1").set_namespace("xyz");
+    metrics::measure("value", 1); // using timers to avoid filtering builtin counters/gauges
+
+    auto ts = metrics::timer::now();          
+    while (received_metric.empty() && metrics::timer::now() - ts < 2200);
+    
+    stop(svr);
+
+    EXPECT_EQ("xyz.value", received_metric);
+}
+
+/*
+TEST(ServerTest, NamespaceIsUsed) {
+    std::string received_metric;
+
+    auto backend = [&](const metrics::stats& s){ received_metric = s.timers.cbegin()->first; };
+    auto svr = start([&](metrics::server_config& cfg) { cfg.add_backend(backend); });
+
+    metrics::setup_client("127.0.0.1").set_namespace("xyz");
+    metrics::measure("value", 1); // use timers to avoid filtering builtin counters/gauges
+
+    stop_after_flush(svr, 2000);
+
+    EXPECT_EQ("xyz.value", received_metric);
+}  
+*/
+
