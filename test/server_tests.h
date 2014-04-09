@@ -11,13 +11,45 @@ namespace metrics
     stats flush_metrics(const storage& storage, unsigned int period_ms);
     void process_metric(storage* storage, char* buff, size_t len);
 }
-metrics::server start(const metrics::server_config& cfg)
+
+using metrics::server_events;
+
+void wait(int delta_ms)
 {
-    auto svr = metrics::server::run(cfg);
     auto ts = metrics::timer::now();          
-    // wait a bit until it spins up (hopefully)
-    // todo: add a callback to denote that server has started/stopped
-    while (metrics::timer::now() - ts < 100); 
+    while (metrics::timer::now() - ts < delta_ms); 
+}
+      
+// todo: use fixture
+bool start_received_ = false;
+bool stop_received_ = false;
+bool flush_happened_ = false;
+
+metrics::server start(metrics::server_config& cfg)
+{      
+    start_received_ = false;   
+    stop_received_ = false;   
+    flush_happened_ = false;
+
+    auto cb = [&](server_events e) {
+        if (e == metrics::Started) start_received_ = true; 
+        if (e == metrics::Stopped) stop_received_ = true;
+    };
+
+    cfg.add_server_listener(cb);
+
+    auto on_flush_backend = [&](const metrics::stats& s) {
+        flush_happened_ = true;
+    };
+
+    cfg.add_backend(on_flush_backend);
+
+    auto svr = metrics::server::run(cfg);
+    
+    auto ts = metrics::timer::now();          
+    while (!start_received_ && metrics::timer::now() - ts < 2000); 
+    if (!start_received_) ADD_FAILURE_AT(__FILE__, __LINE__);
+
     return svr;
 }
 
@@ -25,7 +57,16 @@ void stop(metrics::server& svr)
 {
     svr.stop();
     auto ts = metrics::timer::now();
-    while (metrics::timer::now() - ts < 100); // wait a bit until it stops
+    while (!stop_received_ && metrics::timer::now() - ts < 2000);
+    if (!stop_received_) ADD_FAILURE_AT(__FILE__, __LINE__);
+}
+
+void wait_until_flush(int timeout_ms = 3000)
+{
+    auto ts = metrics::timer::now();
+    while (!flush_happened_ && metrics::timer::now() - ts < timeout_ms);
+    if (!flush_happened_) ADD_FAILURE_AT(__FILE__, __LINE__);
+    flush_happened_ = false;
 }
 
 TEST(ServerTest, TimerDataCalculation) {
@@ -226,8 +267,7 @@ TEST(ServerTest, PreFlushCalled) {
         .pre_flush([&](){ flush_called = true; });
 
     auto svr = start(cfg);
-    auto ts = metrics::timer::now();
-    while (!flush_called && metrics::timer::now() - ts < 3000);
+    wait_until_flush();
     stop(svr);
     EXPECT_TRUE(flush_called);
 }
@@ -244,37 +284,51 @@ TEST(ServerTest, CheckConfigSettings) {
 TEST(ServerTest, NamespaceIsUsed) {
     std::string received_metric;
 
-    auto backend = [&](const metrics::stats& s){ 
+    auto backend = [&](const metrics::stats& s) { 
         if (!s.timers.empty()) received_metric = s.timers.cbegin()->first;
     };
 
     auto cfg = metrics::server_config().add_backend(backend).flush_every(1);
     auto svr = start(cfg);
-    
-    metrics::setup_client("127.0.0.1").set_namespace("xyz");
+
     metrics::measure("value", 1); // using timers to avoid filtering builtin counters/gauges
+    wait_until_flush();    
+    EXPECT_EQ("stats.value", received_metric);
 
-    auto ts = metrics::timer::now();          
-    while (received_metric.empty() && metrics::timer::now() - ts < 2200);
-    
-    stop(svr);
-
+    metrics::g_client.set_namespace("xyz");
+    metrics::measure("value", 1); 
+    wait_until_flush();    
     EXPECT_EQ("xyz.value", received_metric);
+
+    stop(svr);
 }
 
-/*
-TEST(ServerTest, NamespaceIsUsed) {
-    std::string received_metric;
+TEST(ServerTest, ServerEvents) 
+{
+    bool start_received = false;
+    bool stop_received = false;
 
-    auto backend = [&](const metrics::stats& s){ received_metric = s.timers.cbegin()->first; };
-    auto svr = start([&](metrics::server_config& cfg) { cfg.add_backend(backend); });
+    auto cb = [&](metrics::server_events e) {
+        start_received = e == metrics::Started;
+        stop_received = e == metrics::Stopped;
+    };
 
-    metrics::setup_client("127.0.0.1").set_namespace("xyz");
-    metrics::measure("value", 1); // use timers to avoid filtering builtin counters/gauges
+    // don't use start/stop helpers as they use event listeners and we don't
+    // want to affect this test
 
-    stop_after_flush(svr, 2000);
+    auto cfg = metrics::server_config().add_server_listener(cb);
+    auto svr = metrics::server::run(cfg);
+    
+    auto ts = metrics::timer::now();
+    while (!start_received && metrics::timer::now() - ts < 2000);
 
-    EXPECT_EQ("xyz.value", received_metric);
-}  
-*/
+    EXPECT_TRUE(start_received);
+    EXPECT_FALSE(stop_received);
 
+    svr.stop();
+
+    ts = metrics::timer::now();
+    while (!stop_received && metrics::timer::now() - ts < 2000);
+
+    EXPECT_TRUE(stop_received);
+}

@@ -8,11 +8,24 @@
 
 namespace metrics
 {
+    /// represents events that server notifies the clients about using a 
+    // callback proveded by server_config::on_server_event
+    enum server_events
+    {
+        StartupFailed,
+        Started,
+        Stopped
+    };
+
     /// prototype for function to be called immediately before flush.
     typedef  std::function<void(void)> FLUSH_FN;
 
     /// a function which takes `const stats&` and returns nothing
     typedef std::function<void(const stats&)> BACKEND_FN;
+
+    /// prototype for function called by server to broadcast notifications
+    typedef std::function<void(server_events)> SERVER_NOTIFICATION_FN;
+
 
     class server_config;
 
@@ -22,6 +35,7 @@ namespace metrics
         unsigned int m_flush_period;
         unsigned int m_port;
         FLUSH_FN m_callback;
+        std::vector<SERVER_NOTIFICATION_FN> m_server_cbs;
         std::vector<BACKEND_FN> m_backends;
 
     public:
@@ -139,6 +153,25 @@ namespace metrics
         server_config& pre_flush(FLUSH_FN callback);
 
         /**
+        * Specifies the function to be called when server broadcasts important
+        * notifications. You can use this to get notified when server starts, 
+        * stops, etc. Multiple listeners can be registered.
+        *
+        * @param callback Callback function, lambda, functor or anything
+        * convertible to `std::function<void(server_events)>`.
+        *
+        * Example:
+        * ~~~{.cpp}
+        * // set up an inproc server 
+        * auto cfg = metrics::server_config()
+        *     .add_server_listener([](server_events e){ printf("%d", e); }); // use lambda
+        * 
+        * server::run(cfg);                             // start the server
+        * ~~~
+        */
+        server_config& add_server_listener(SERVER_NOTIFICATION_FN callback);
+
+        /**
         * Specifies where the debug info will be logged.
         * @param target Output target: "console", ...
         * @todo *NOT IMPLEMENTED YET*
@@ -148,6 +181,7 @@ namespace metrics
         unsigned int flush_period_ms() const { return m_flush_period * 1000; }
         unsigned int port() const { return m_port; }
         const FLUSH_FN& flush_fn() const { return m_callback; }
+        const std::vector<SERVER_NOTIFICATION_FN>& server_cbs() const { return m_server_cbs; }
         const std::vector<BACKEND_FN>& backends() const { return m_backends; }
     };
 

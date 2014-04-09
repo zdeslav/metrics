@@ -28,6 +28,12 @@ namespace metrics
         return *this;
     }
 
+    server_config& server_config::add_server_listener(SERVER_NOTIFICATION_FN callback)
+    {
+        m_server_cbs.push_back(callback);
+        return *this;
+    }
+
     server_config& server_config::log(const char* target) {
         // todo
         return *this;
@@ -125,6 +131,7 @@ namespace metrics
 
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) { // create a UDP socket
             dbg_print("cannot create server socket: error: %d", WSAGetLastError());
+            FOR_EACH(auto& cb, pcfg->server_cbs()) cb(StartupFailed);
             return 1;
         }
 
@@ -138,7 +145,8 @@ namespace metrics
 
         if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
             dbg_print("bind failed, error: %d", WSAGetLastError());
-            closesocket(fd);
+            closesocket(fd);       
+            FOR_EACH(auto& cb, pcfg->server_cbs()) cb(StartupFailed);
             return 1;
         }
 
@@ -146,11 +154,12 @@ namespace metrics
         
         int maxfd = fd;
         fd_set static_rdset, rdset;
-        timeval timeout = { 1, 0 };
+        timeval timeout = { 0, 250000 };
 
         FD_ZERO(&static_rdset);
         FD_SET(fd, &static_rdset);
 
+        FOR_EACH(auto& cb, pcfg->server_cbs()) cb(Started);
         while (true) {
             rdset = static_rdset;
             select(maxfd + 1, &rdset, NULL, NULL, &timeout);
@@ -162,6 +171,7 @@ namespace metrics
                     if (strcmp(buf, "stop") == 0) {
                         dbg_print(" > received STOP cmd, stopping server");
                         closesocket(fd);
+                        FOR_EACH(auto& cb, pcfg->server_cbs()) cb(Stopped);
                         return 0;
                     }
                     dbg_print(" > received:%s (%d bytes)", buf, recvlen);

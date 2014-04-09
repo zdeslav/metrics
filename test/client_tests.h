@@ -4,7 +4,7 @@
 #include "../metrics/metrics.h"
 
 
-TEST(ServerTest, CheckClientSettings) {
+TEST(ClientTest, CheckClientSettings) {
     ASSERT_THROW(metrics::setup_client(""), metrics::config_exception);
     ASSERT_THROW(metrics::setup_client("efgkleioger//*;/&g"), metrics::config_exception);
     ASSERT_NO_THROW(metrics::setup_client("127.0.0.1"));
@@ -21,6 +21,4 @@ TEST(ServerTest, CheckClientSettings) {
 
     cfg.set_debug(false);
     EXPECT_FALSE(cfg.is_debug());
-
-    
 }
