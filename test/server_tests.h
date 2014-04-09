@@ -166,6 +166,22 @@ TEST(ServerTest, GaugeProcessing) {
     EXPECT_EQ(10, store.gauges["stats.test.gauge"]);
     
     EXPECT_EQ(0, store.timers.size());
+
+    // deltas
+    char metric3[] = "stats.test.gauge:+2|g";
+    process_metric(&store, metric3, strlen(metric3));
+    EXPECT_EQ(2, store.gauges.size());
+    EXPECT_EQ(12, store.gauges["stats.test.gauge"]);
+
+    char metric4[] = "stats.test.gauge:-3|g";
+    process_metric(&store, metric4, strlen(metric4));
+    EXPECT_EQ(2, store.gauges.size());
+    EXPECT_EQ(9, store.gauges["stats.test.gauge"]);
+
+    char metric5[] = "stats.test.gauge_new:-7|g";
+    process_metric(&store, metric5, strlen(metric5));
+    EXPECT_EQ(3, store.gauges.size());
+    EXPECT_EQ(-7, store.gauges["stats.test.gauge_new"]);
 }
 
 TEST(ServerTest, CounterProcessing) {

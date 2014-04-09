@@ -8,6 +8,14 @@
 /// all metrics types and functions are defined inside @ref metrics namespace
 namespace metrics
 {
+    enum metric_type
+    {
+        counter,
+        histogram,
+        gauge,
+        gauge_delta
+    };
+
     typedef const char* METRIC_ID;
 
     void ensure_winsock_started();
@@ -37,13 +45,6 @@ namespace metrics
     {
     public:
         explicit config_exception(const char* message) : std::runtime_error(message){ ; }
-    };
-
-    enum metric_type
-    {
-        counter,
-        histogram,
-        gauge
     };
 
     /// lists all the default metrics, which can be automatically tracked
@@ -246,7 +247,24 @@ namespace metrics
     * }
     * ~~~
     */
-    void set(METRIC_ID metric, int value);
+    void set(METRIC_ID metric, unsigned int value);
+
+    /**
+    *  Sets the delta for specified gauge metric
+    *  @param metric The name of the gauge to be updated
+    *  @param value Amount to be added to the the gauge.
+    *
+    * ~~~ {.cpp}
+    * void on_login(const char* user) {
+    *     ...
+    *     metrics::set("free_space", 2000);       // free_space => 2000
+    *     metrics::set("free_space", 3000);       // free_space => 3000
+    *     metrics::set_delta("free_space", 100);  // free_space => 3100
+    *     metrics::set_delta("free_space", -600); // free_space => 2500
+    * }
+    * ~~~
+    */
+    void set_delta(METRIC_ID metric, int value);
 }
 
 

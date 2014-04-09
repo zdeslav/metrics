@@ -111,6 +111,7 @@ namespace metrics
         switch (m) {
             case histogram: return "%s.%s:%d|ms";
             case gauge: return "%s.%s:%d|g";
+            case gauge_delta: return "%s.%s:%+d|g";
             case counter: return "%s.%s:%d|c";
             default: throw std::runtime_error("unsupported metric type");
         }
@@ -174,8 +175,13 @@ namespace metrics
         signal<histogram>(metric, value);
     }
 
-    void set(METRIC_ID metric, int value)
+    void set(METRIC_ID metric, unsigned int value)
     {
         signal<gauge>(metric, value);
+    }
+
+    void set_delta(METRIC_ID metric, int value)
+    {
+        signal<gauge_delta>(metric, value);
     }
 }

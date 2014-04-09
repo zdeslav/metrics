@@ -86,9 +86,12 @@ namespace metrics
 
         metric_type metric;
         if (strcmp(pipe_pos, "|h") == 0) metric = histogram;
-        else if (strcmp(pipe_pos, "|g") == 0) metric = gauge;
         else if (strcmp(pipe_pos, "|c") == 0) metric = counter;
         else if (strcmp(pipe_pos, "|ms") == 0) metric = histogram;
+        else if (strcmp(pipe_pos, "|g") == 0) { // abs or delta?
+            char sign = *(colon_pos + 1);
+            metric = (sign == '+' || sign == '-') ? gauge_delta : gauge;
+        }
         else {
             dbg_print("unknown metric type: %s", pipe_pos);
             return;
@@ -110,7 +113,10 @@ namespace metrics
             case metrics::gauge:
                 storage->gauges[metric_name] = value;
                 break;
-            case metrics::histogram: 
+            case metrics::gauge_delta:
+                storage->gauges[metric_name] += value;
+                break;
+            case metrics::histogram:
                 storage->timers[metric_name].push_back(value);
                 break;
         }

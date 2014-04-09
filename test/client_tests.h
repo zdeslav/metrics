@@ -93,6 +93,8 @@ TEST(ClientTest, CheckClientApi) {
     metrics::inc("counter", 4);
     metrics::set("gauge", 17);
     metrics::measure("timer", 22);
+    metrics::set_delta("gauge", 3);
+    metrics::set_delta("gauge", -2);
 
     auto messages = svr.get_messages();
 
@@ -100,6 +102,8 @@ TEST(ClientTest, CheckClientApi) {
     EXPECT_EQ("stats.counter:4|c", messages[1]);
     EXPECT_EQ("stats.gauge:17|g", messages[2]);
     EXPECT_EQ("stats.timer:22|ms", messages[3]);
+    EXPECT_EQ("stats.gauge:+3|g", messages[4]);
+    EXPECT_EQ("stats.gauge:-2|g", messages[5]);
 }
 
 namespace metrics

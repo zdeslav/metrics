@@ -25,6 +25,9 @@ metrics::server start_local_server(unsigned int port)
     // just register it with server_config::pre_flush()
     auto on_flush = [] { printf("flushing!"); };
 
+    // you can also specify a function to be called when server is started or stopped: 
+    auto on_server_info = [] (server_events e) { printf("server event:", e); };
+
     // here we used console and file backends
     console_backend console;
     file_backend file("d:\\stats.log");
@@ -34,7 +37,7 @@ metrics::server start_local_server(unsigned int port)
         .flush_every(10)          // flush measurements every 10 seconds
         .add_backend(console)     // send data to console for display
         .add_backend(file)        // and also to file
-        .log("console");          // log metrics to console
+        .add_server_listener(on_server_info); // register for server notifications
 
     // returned server instance is just a proxy to the server thread, so it is
     // safe to share it around. You can call stop() on it, to stop server gracefully
