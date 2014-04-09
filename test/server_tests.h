@@ -74,3 +74,75 @@ TEST(ServerTest, TimerProcessing) {
     EXPECT_EQ(2, store.timers["stats.test.timer"].size());
     EXPECT_EQ(100, store.timers["stats.test.timer"].back());  
 }
+
+TEST(ServerTest, GaugeProcessing) {
+    metrics::storage store;
+
+    char metric1[] = "stats.test.gauge:5|g";
+    auto before = metrics::timer::now();
+    process_metric(&store, metric1, strlen(metric1));
+    auto after = metrics::timer::now();
+
+    EXPECT_EQ(1, store.counters.size());
+    EXPECT_EQ(1, store.counters[metrics::builtin::internal_metrics_count]);
+
+    auto ts = store.gauges[metrics::builtin::internal_metrics_last_seen];
+    EXPECT_EQ(2, store.gauges.size());
+    EXPECT_GE(ts, before);
+    EXPECT_LE(ts, after);
+    EXPECT_EQ(5, store.gauges["stats.test.gauge"]);
+
+    EXPECT_EQ(0, store.timers.size());
+
+    char metric2[] = "stats.test.gauge:10|g";
+    before = metrics::timer::now();
+    process_metric(&store, metric2, strlen(metric2));
+    after = metrics::timer::now();
+
+    EXPECT_EQ(1, store.counters.size());
+    EXPECT_EQ(2, store.counters[metrics::builtin::internal_metrics_count]);
+
+    ts = store.gauges[metrics::builtin::internal_metrics_last_seen];
+    EXPECT_EQ(2, store.gauges.size());
+    EXPECT_GE(ts, before);
+    EXPECT_LE(ts, after);
+    EXPECT_EQ(10, store.gauges["stats.test.gauge"]);
+    
+    EXPECT_EQ(0, store.timers.size());
+}
+
+TEST(ServerTest, CounterProcessing) {
+    metrics::storage store;
+
+    char metric1[] = "stats.test.counter:1|c";
+    auto before = metrics::timer::now();
+    process_metric(&store, metric1, strlen(metric1));
+    auto after = metrics::timer::now();
+
+    EXPECT_EQ(2, store.counters.size());
+    EXPECT_EQ(1, store.counters[metrics::builtin::internal_metrics_count]);
+    EXPECT_EQ(1, store.counters["stats.test.counter"]);
+
+    auto ts = store.gauges[metrics::builtin::internal_metrics_last_seen];
+    EXPECT_EQ(1, store.gauges.size());
+    EXPECT_GE(ts, before);
+    EXPECT_LE(ts, after);
+
+    EXPECT_EQ(0, store.timers.size());
+
+    char metric2[] = "stats.test.counter:3|c";
+    before = metrics::timer::now();
+    process_metric(&store, metric2, strlen(metric2));
+    after = metrics::timer::now();
+
+    EXPECT_EQ(2, store.counters.size());
+    EXPECT_EQ(2, store.counters[metrics::builtin::internal_metrics_count]);
+    EXPECT_EQ(4, store.counters["stats.test.counter"]);
+
+    ts = store.gauges[metrics::builtin::internal_metrics_last_seen];
+    EXPECT_EQ(1, store.gauges.size());
+    EXPECT_GE(ts, before);
+    EXPECT_LE(ts, after);
+
+    EXPECT_EQ(0, store.timers.size());
+}
