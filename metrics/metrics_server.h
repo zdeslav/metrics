@@ -9,12 +9,12 @@
 namespace metrics
 {
     /// represents events that server notifies the clients about using a 
-    // callback proveded by server_config::on_server_event
+    /// callback proveded by server_config::on_server_event
     enum server_events
     {
-        StartupFailed,
-        Started,
-        Stopped
+        StartupFailed, ///< an error occurred during server startup
+        Started,       ///< server has started successfully
+        Stopped        ///< server was stopped gracefully using server::stop()
     };
 
     /// prototype for function to be called immediately before flush.

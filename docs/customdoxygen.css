@@ -56,7 +56,7 @@ tt, code, kbd, samp {
 
 span.comment {
     color: #595;
-    /*font-style: italic;*/
+    font-style: italic;
 }
 
 span.keyword, span.keywordflow {
