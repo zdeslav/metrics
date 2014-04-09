@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gtest/gtest.h"
 #include "../metrics/metrics_server.h"
+#include "gtest/gtest.h"
 
 namespace metrics
 {
@@ -12,7 +12,7 @@ namespace metrics
     void process_metric(storage* storage, char* buff, size_t len);
 }
 
-TEST(ServerTest, TimerFlush) {
+TEST(ServerTest, TimerDataCalculation) {
     std::vector<int> values = { 17, 13, 15, 16, 18 };
     metrics::timer_data data = metrics::process_timer("test.timer", values);
 
@@ -25,7 +25,7 @@ TEST(ServerTest, TimerFlush) {
     EXPECT_NEAR(1.72047, data.stddev, 0.00001);
 }
 
-TEST(ServerTest, FlushLogic) {
+TEST(ServerTest, FlushLogicForEmptyStor) {
     metrics::storage store;
     auto before = metrics::timer::now();
     auto stats = metrics::flush_metrics(store, 10000);
@@ -145,4 +145,60 @@ TEST(ServerTest, CounterProcessing) {
     EXPECT_LE(ts, after);
 
     EXPECT_EQ(0, store.timers.size());
+}
+
+/*
+stats flush_metrics(const storage& storage, unsigned int period_ms)
+{
+stats stats;
+stats.timestamp = timer::now();
+
+auto period =  period_ms / 1000.0;
+
+FOR_EACH (auto& c, storage.counters) stats.counters[c.first] = c.second / period;
+FOR_EACH (auto& g, storage.gauges) stats.gauges[g.first] = g.second;
+FOR_EACH (auto& t, storage.timers) stats.timers[t.first] = process_timer(t.first, t.second);
+
+return stats; // todo: move
+}
+
+*/
+
+
+bool operator == (const metrics::timer_data& lhs, const metrics::timer_data& rhs)
+{
+    return lhs.count == rhs.count
+        && lhs.avg == rhs.avg
+        && lhs.max == rhs.max
+        && lhs.min == rhs.min
+        && lhs.sum == rhs.sum
+        && lhs.stddev == rhs.stddev
+        && lhs.metric == rhs.metric;
+}
+
+TEST(ServerTest, Flushing) {
+    metrics::storage store;
+
+    store.counters["c.1"] = 5;
+    store.counters["c.2"] = 10;
+
+    store.gauges["g.1"] = 42;
+    store.gauges["g.2"] = 999;
+
+    store.timers["t.1"] = { 17, 13, 15, 16, 18 };
+    store.timers["t.2"] = { 1, 2, 3};
+
+    auto stats = metrics::flush_metrics(store, 10000);
+
+    EXPECT_DOUBLE_EQ(0.5, stats.counters["c.1"]);
+    EXPECT_DOUBLE_EQ(1, stats.counters["c.2"]);
+
+    EXPECT_EQ(42, stats.gauges["g.1"]);
+    EXPECT_EQ(999, stats.gauges["g.2"]);
+
+    auto td1 = metrics::process_timer("t.1", { 17, 13, 15, 16, 18 } );
+    auto td2 = metrics::process_timer("t.2", { 1, 2, 3 });
+
+    EXPECT_TRUE(td1 == stats.timers["t.1"]);
+    EXPECT_TRUE(td2 == stats.timers["t.2"]);
 }
