@@ -1,8 +1,72 @@
 #pragma once
 
 #include "gtest/gtest.h"
-#include "../metrics/metrics.h"
+#include "../metrics/metrics_server.h"
 
+class fake_server
+{
+    struct SOCK_ADDR_IN : public sockaddr_in
+    {
+        SOCK_ADDR_IN(int family, unsigned long addr, int port)
+        {      
+            memset((char *)this, 0, sizeof(*this));
+            sin_family = family;
+            sin_addr.s_addr = htonl(addr);
+            sin_port = htons(port);
+        }
+    };
+
+    SOCKET m_sock;
+    std::vector<std::string> m_messages;
+public:
+    fake_server(int port = 9999)
+    {
+        if ((m_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) { // create a UDP socket
+            throw std::runtime_error("cannot create server socket");
+        }
+
+        SOCK_ADDR_IN myaddr(AF_INET, INADDR_LOOPBACK, port);
+
+        if (bind(m_sock, (sockaddr*)&myaddr, sizeof(myaddr)) < 0) {
+            closesocket(m_sock);
+            throw std::runtime_error("cannot bind server socket");
+        }
+    }
+    ~fake_server()
+    {
+        closesocket(m_sock);
+    }
+
+    void pump_messages(bool reset_messages = true, int timeout_ms = 1000)
+    {
+        m_messages.clear();
+        sockaddr_in remaddr;
+        int addrlen = sizeof(remaddr);
+        const int BUFSIZE = 4096;
+        char buf[BUFSIZE];
+        int maxfd = m_sock;
+        fd_set static_rdset, rdset;
+        timeval timeout = { 0, 50000 };
+
+        FD_ZERO(&static_rdset);
+        FD_SET(m_sock, &static_rdset);
+
+        while (true) {
+            rdset = static_rdset;
+            if (0 == select(maxfd + 1, &rdset, NULL, NULL, &timeout)) return;  // timeout
+
+            if (FD_ISSET(m_sock, &rdset)) {
+                int recvlen = recvfrom(m_sock, buf, BUFSIZE, 0, (sockaddr*)&remaddr, &addrlen);
+                if (recvlen > 0 && recvlen < BUFSIZE) {
+                    buf[recvlen] = 0;
+                    m_messages.push_back(buf);
+                }
+            }
+        }
+    }
+
+    std::vector<std::string> messages() const { return m_messages; }
+};
 
 TEST(ClientTest, CheckClientSettings) {
     ASSERT_THROW(metrics::setup_client(""), metrics::config_exception);
@@ -13,12 +77,99 @@ TEST(ClientTest, CheckClientSettings) {
 
     ASSERT_THROW(cfg.track_default_metrics(0), metrics::config_exception);
 
+    EXPECT_STREQ("stats", cfg.get_namespace());
     cfg.set_namespace("test_ns");
     EXPECT_STREQ("test_ns", cfg.get_namespace());
 
     cfg.set_debug(true);
     EXPECT_TRUE(cfg.is_debug());
-
     cfg.set_debug(false);
     EXPECT_FALSE(cfg.is_debug());
+}
+
+TEST(ClientTest, CheckClientApi) {
+    metrics::setup_client("127.0.0.1");
+    fake_server svr;
+
+    metrics::inc("counter");  
+    svr.pump_messages();
+    EXPECT_EQ("stats.counter:1|c", svr.messages()[0]);
+
+    metrics::inc("counter", 4);
+    svr.pump_messages();
+    EXPECT_EQ("stats.counter:4|c", svr.messages()[0]);
+
+    metrics::set("gauge", 17);
+    svr.pump_messages();
+    EXPECT_EQ("stats.gauge:17|g", svr.messages()[0]);
+
+    metrics::measure("timer", 22);
+    svr.pump_messages();
+    EXPECT_EQ("stats.timer:22|ms", svr.messages()[0]);
+}
+
+namespace metrics
+{
+    void process_metric(storage* storage, char* buff, size_t len);
+}
+
+TEST(ClientTest, AutoTimer) {
+    metrics::setup_client("127.0.0.1");
+    fake_server svr;
+
+    {
+        metrics::auto_timer _("auto");
+        auto ts = metrics::timer::now();
+        while (metrics::timer::now() - ts < 50); // wait ~50 ms
+    }
+
+    svr.pump_messages();
+
+    char txt[512];
+    strcpy_s(txt, svr.messages()[0].c_str());
+
+    metrics::storage store;
+    metrics::process_metric(&store, txt, strlen(txt));
+
+    auto name = store.timers.begin()->first;
+    auto vec = store.timers.begin()->second;
+
+    EXPECT_EQ("stats.auto", name);
+    EXPECT_LE(50, vec[0]);
+}
+
+void measured_fn(int timeout_ms)
+{
+        MEASURE_FN();
+        auto ts = metrics::timer::now();
+        while (metrics::timer::now() - ts < timeout_ms); 
+}
+
+TEST(ClientTest, FunctionTimer) {
+    metrics::setup_client("127.0.0.1");
+    fake_server svr;
+
+    measured_fn(10);
+    measured_fn(20);
+    measured_fn(50);
+
+    svr.pump_messages();
+
+    metrics::storage store;
+
+    FOR_EACH(auto& msg, svr.messages())
+    {
+        char txt[512];
+        strcpy_s(txt, msg.c_str());
+        metrics::process_metric(&store, txt, strlen(txt));
+    }
+
+    auto name = store.timers.begin()->first;
+    auto vec = store.timers.begin()->second;
+
+    // gtest generated magic...
+    EXPECT_EQ("stats.app.fn.measured_fn", name);
+    EXPECT_LE(10, vec[0]);
+    EXPECT_LE(20, vec[1]);
+    EXPECT_LE(50, vec[2]);
 }
