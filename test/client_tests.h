@@ -64,7 +64,7 @@ TEST(ClientTest, CheckClientSettings) {
 
     auto cfg = metrics::setup_client("127.0.0.1");
 
-    ASSERT_THROW(cfg.track_default_metrics(0), metrics::config_exception);
+    ASSERT_THROW(cfg.track_default_metrics(metrics::all, 0), metrics::config_exception);
 
     EXPECT_STREQ("stats", cfg.get_namespace());
     cfg.set_namespace("test_ns");

@@ -8,7 +8,7 @@
 
 namespace metrics
 {
-    /// represents events that server notifies the clients about using a 
+    /// Represents events that server notifies the clients about using a 
     /// callback proveded by server_config::on_server_event
     enum server_events
     {

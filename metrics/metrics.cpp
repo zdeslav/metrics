@@ -84,7 +84,8 @@ namespace metrics
 
     client_config::client_config() :
         m_debug(false),
-        m_defaults_period(0), // 0 - no tracking
+        m_defaults_period(60),
+        m_default_metrics(none),
         m_port(0),
         m_namespace("stats")
     {;}
@@ -93,9 +94,10 @@ namespace metrics
         m_debug = debug;
         return *this;
     }
-    client_config& client_config::track_default_metrics(unsigned int period) {
+    client_config& client_config::track_default_metrics(builtin_metric which, unsigned int period) {
         if (period < 1)  throw config_exception("specified period must be greater than 0");
         m_defaults_period = period;
+        m_default_metrics = which;
         return *this;
     }
     client_config& client_config::set_namespace(const std::string& ns) {

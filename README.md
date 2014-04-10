@@ -70,10 +70,10 @@ running). Of course, additional client settings can be specified:
 
 ~~~{.cpp}
     // setup the client, only host and port settings are required
-    metrics::setup_client("localhost", 9999) // point client to the server
-        .set_debug(true)                     // turn on debug tracing if you need it
-        .set_namespace("myapp")              // specify metrics namespace, default is "stats"
-        .track_default_metrics();            // track default system and process metrics
+    metrics::setup_client("localhost", 9999)  // point client to the server
+        .set_debug(true)                      // turn on debug tracing if you need it
+        .set_namespace("myapp")               // specify metrics namespace, default is "stats"
+        .track_default_metrics(metrics::all); // track default system and process metrics
 ~~~
 
 Now you can start tracking the metrics.

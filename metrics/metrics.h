@@ -16,6 +16,20 @@ namespace metrics
         gauge_delta
     };
 
+    /// Represents different groups of built-in metrics. These can be combined 
+    /// as flags to specify what builtin metrics will be automatically tracked,
+    /// e.g. `process | system` means system and process metrics will be tracked
+    /// while internal metrics will not.
+    /// @see track_default_metrics
+    enum builtin_metric
+    {
+        none    = 0,       ///< no metrics will be tracked 
+        process = 1,       ///< process related metrics 
+        system  = 2,       ///< system-wide metrics 
+        metrics = 4,       ///< internal metrics (last_seen, total count, ...)
+        all     = 0xFFFF   ///< track all metrics
+    };
+
     struct SOCK_ADDR_IN : public sockaddr_in {
         SOCK_ADDR_IN() {
             memset((char *)this, 0, sizeof(SOCK_ADDR_IN));
@@ -107,10 +121,10 @@ namespace metrics
     * Example:
     * ~~~{.cpp}
     * // set up the client
-    * metrics::setup_client("127.0.0.1", 9999) // point client to the server
-    *     .set_debug(true)                     // turn on debug tracing
-    *     .set_namespace("myapp")              // specify namespace, default is "stats"
-    *     .track_default_metrics();            // track default system and process metrics
+    * metrics::setup_client("127.0.0.1", 9999)  // point client to the server
+    *     .set_debug(true)                      // turn on debug tracing
+    *     .set_namespace("myapp")               // specify namespace, default is "stats"
+    *     .track_default_metrics(metrics::all); // track default system and process metrics
     * ~~~
     *
     * @see client_config
@@ -127,6 +141,7 @@ namespace metrics
         bool m_debug;
         unsigned int m_port;
         unsigned int m_defaults_period;
+        builtin_metric m_default_metrics;
         std::string m_namespace;
         std::string m_server;
         SOCK_ADDR_IN m_svr_address;
@@ -148,11 +163,12 @@ namespace metrics
         * For list of supported default metrics, check constants in 
         * metrics::builtin namespace
         *
+        * @param which  Which groups of metrics will be tracked
         * @param period How often, in seconds, will default metrics be collected.
         *               The default value is 45 seconds, valid values are > 0.
         * @throws config_exception Thrown if period is set to 0
         */
-        client_config& track_default_metrics(unsigned int period = 45);
+        client_config& track_default_metrics(builtin_metric which = all, unsigned int period = 45);
 
         /**
         * Specifies the namespace to be used for metrics. The default is "stats"
