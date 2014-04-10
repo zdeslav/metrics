@@ -40,8 +40,6 @@ Usage
 Client application sends metrics to server, which aggregates them and sends them to
 various backends. Here's more info on [how it works](docs/how_it_works.md).
 
-[Types of metrics](docs/metric_types.md)
-
 ### Setting up the client
 
 Before writing any metrics, you need to set up the client:

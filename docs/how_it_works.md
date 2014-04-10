@@ -4,8 +4,8 @@ How it works
 There are three parts to metrics tracking with metric++:
 
 * client - it sends raw metrics to the server. Examples:
-    * every time a user logs in, 'app.login' counter is incremented
-    * duration of each request is measured as 'app.request.duration' timer
+    * every time a user logs in, `app.login` counter is incremented
+    * duration of each request is measured as `app.request.duration` timer
 * server - it receives metrics from client and periodically (e.g. every 60s)
     flushes them. For examples above:
     * `app.login` total will be divided by flush period to calculate number of
