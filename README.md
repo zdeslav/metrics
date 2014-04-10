@@ -1,10 +1,10 @@
 Metric++
 ========
 
-Metric++ is a C++ library which provides simple metrics tracking for Windows 
+Metric++ is a C++ library which provides simple metrics tracking for Windows
 applications, inspired by [statsd] metrics.
 
-It is based on [statsd protocol], and provides C++ client library for statsd, 
+It is based on [statsd protocol], and provides C++ client library for statsd,
 as well as server implementation.
 
 The collected metrics can be sent to various backends to analyze and process
@@ -21,25 +21,10 @@ data. E.g. they can be displayed in [graphite] or one of its numerous
 Building the software
 ---------------------
 
-Open the `metrics.sln` solution in Visual Studio 2010 or 2013, 
-choose the appropriate configuration (see below) and build it - that's it. 
+Open the `metrics.sln` solution in Visual Studio 2010 or 2013,
+choose the appropriate configuration (see below) and build it - that's it.
 
-Binaries will be built in `build\` directory, in a subdirectory depending on 
-configuration. E.g. if you build `Debug` configuration, you will find files in 
-`build\debug` directory.
-
-The provided solution file contains two projects: 
-
-* `metrics` - a demo console app which contains metric++ library files
-* `test` - unit tests for metric++
-
-There are configurations both for Visual Studio 2010 and 2013: 
-
-* use `Release` and `Debug` configurations to build on VS 2013 
-* use `Release_VS2010` and `Debug_VS2010` to build on VS 2010
-
-Metric++ is provided as a set of source code files. It is up to you to decide 
-how to add it to your project: as source files, as lib/dll or something else.
+For more details, see [here](docs/how_to_build.md)
 
 ### Documentation
 
@@ -99,14 +84,14 @@ void test_fn_0()
 // simpler:
 void test_fn_1()
 {
-    metrics::auto_timer _("app.fn.duration");  
+    metrics::auto_timer _("app.fn.duration");
     // do something lengthy
 }   // <- "app.fn.duration" store here when auto_timer destructor is called
 
 // even simpler:
 void test_fn_2()
 {
-    MEASURE_FN(); 
+    MEASURE_FN();
     // do something lengthy
 }   // <- "app.fn.test_fn_2" timer stored here
 
@@ -123,7 +108,7 @@ void login(const char* user)
        metrics::inc("app.logins.failed"); // ...increment counter of failed logins
        ...
     }
-}   
+}
 ~~~
 
 
