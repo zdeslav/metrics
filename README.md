@@ -22,7 +22,7 @@ Building the software
 ---------------------
 
 Open the `metrics.sln` solution in Visual Studio 2010 or 2013,
-choose the appropriate configuration (see below) and build it - that's it.
+choose the appropriate configuration and build it - that's it.
 
 For more details, see [here](docs/how_to_build.md)
 
@@ -37,7 +37,8 @@ directory `build\docs\html`, just open `index.html` file.
 Usage
 -----
 
-Client application tracks metrics.
+Client application sends metrics to server, which aggregates them and sends them to
+various backends. Here's more info on [how it works](docs/how_it_works.md).
 
 [Types of metrics](docs/metric_types.md)
 
