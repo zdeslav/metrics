@@ -1,8 +1,10 @@
 Running the server      
 ==================
 
-If you don't want to run a separate `statsd` server, you can run it locally, in
-the same process as your client. Just configure it and run it:
+If you don't want to run a separate `statsd` server, you can run the server 
+provided by metric++ locally, in the same process as your client. 
+
+Just configure it and run it:
 
 ~~~{.cpp}
     // following code is the simplest way to start a server. Just specify some
@@ -14,7 +16,18 @@ the same process as your client. Just configure it and run it:
     server::run(cfg);
 ~~~
 
-Of course, additional settings can be specified:
+The server receives the metrics from the client and flushes them periodically
+(this is controlled by `metrics::server_config::flush_every` setting). Flushing 
+procedure calculates metrics data (e.g. for counters it calculates number of 
+entries per second, for timers it calculates min, max, sum, count, average and 
+standard deviation), and sends it to all the specify backends.
+
+Backend is any C++ entity that looks like function which takes `const metrics::stats&`,
+so it can be a function, an object, a lambda, etc. For more details, check
+`metrics::server_config::add_backend` method.
+
+Of course, additional settings can also be specified. Here's an example of
+setting up a more complex server:
 
 ~~~{.cpp}
 metrics::server start_local_server(unsigned int port)
