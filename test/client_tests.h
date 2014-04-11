@@ -26,7 +26,7 @@ public:
         closesocket(m_sock);
     }
 
-    std::vector<std::string> get_messages(bool reset_messages = true, int timeout_ms = 1000)
+    std::vector<std::string> get_messages(bool reset_messages = true, int timeout_ms = 50)
     {
         std::vector<std::string> messages;
 
@@ -36,7 +36,7 @@ public:
         char buf[BUFSIZE];
         int maxfd = m_sock;
         fd_set static_rdset, rdset;
-        timeval timeout = { 0, 50000 };
+        timeval timeout = { timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
 
         FD_ZERO(&static_rdset);
         FD_SET(m_sock, &static_rdset);
@@ -124,7 +124,7 @@ TEST(ClientTest, AutoTimer) {
     auto vec = store.timers.begin()->second;
 
     EXPECT_EQ("stats.auto", name);
-    EXPECT_LE(50, vec[0]);
+    EXPECT_GE(vec[0], 50);
 }
 
 void measured_fn(int timeout_ms)
@@ -156,7 +156,7 @@ TEST(ClientTest, FunctionTimer) {
 
     // gtest generated magic...
     EXPECT_EQ("stats.app.fn.measured_fn", name);
-    EXPECT_LE(10, vec[0]);
-    EXPECT_LE(20, vec[1]);
-    EXPECT_LE(50, vec[2]);
+    EXPECT_GE(vec[0], 10);
+    EXPECT_GE(vec[1], 20);
+    EXPECT_GE(vec[2], 50);
 }

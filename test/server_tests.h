@@ -270,7 +270,7 @@ TEST(ServerTest, PreFlushCalled) {
         .flush_every(1)
         .pre_flush([&](){ flush_called = true; });
 
-    auto svr = start(cfg);
+    metrics::server svr = start(cfg);
     wait_until_flush();
     stop(svr);
     EXPECT_TRUE(flush_called);
@@ -286,29 +286,29 @@ TEST(ServerTest, CheckConfigSettings) {
 }
 
 TEST(ServerTest, NamespaceIsUsed) {
-    std::string received_metric;
+    std::vector<std::string> received_metrics;
 
-    auto backend = [&](const metrics::stats& s) { 
-        if (!s.timers.empty()) received_metric = s.timers.cbegin()->first;
+    auto backend = [&](const metrics::stats& s) {
+        FOR_EACH(auto& pair, s.timers) received_metrics.push_back(pair.first);
     };
 
     auto cfg = metrics::server_config().add_backend(backend).flush_every(1);
-    auto svr = start(cfg);
-
-    metrics::measure("value", 1); // using timers to avoid filtering builtin counters/gauges
-    wait_until_flush();    
-    EXPECT_EQ("stats.value", received_metric);
-
+    metrics::server svr = start(cfg);
+                                  
+    // using timers to avoid filtering builtin counters/gauges
+    metrics::measure("value_a", 1); 
     metrics::g_client.set_namespace("xyz");
-    metrics::measure("value", 1); 
+    metrics::measure("value_b", 1); 
+
     wait_until_flush();    
-    EXPECT_EQ("xyz.value", received_metric);
+    
+    EXPECT_EQ("stats.value_a", received_metrics[0]);
+    EXPECT_EQ("xyz.value_b", received_metrics[1]);
 
     stop(svr);
 }
 
-TEST(ServerTest, ServerEvents) 
-{
+TEST(ServerTest, ServerEvents) {
     bool start_received = false;
     bool stop_received = false;
 
@@ -321,7 +321,7 @@ TEST(ServerTest, ServerEvents)
     // want to affect this test
 
     auto cfg = metrics::server_config().add_server_listener(cb);
-    auto svr = metrics::server::run(cfg);
+    metrics::server svr = metrics::server::run(cfg);
     
     auto ts = metrics::timer::now();
     while (!start_received && metrics::timer::now() - ts < 2000);
