@@ -45,22 +45,12 @@ various backends. Here's more info on [how it works](docs/how_it_works.md).
 Before writing any metrics, you need to set up the client:
 
 ~~~{.cpp}
-    // setup the client
-    metrics::setup_client("localhost", 9999); // point client to the server
+metrics::setup_client("localhost", 9999); // point client to the server
 ~~~
 
-That's it, you are ready to start tracking the metrics (assuming that server is
-running). Of course, additional client settings can be specified:
-
-~~~{.cpp}
-    // setup the client, only host and port settings are required
-    metrics::setup_client("localhost", 9999)  // point client to the server
-        .set_debug(true)                      // turn on debug tracing if you need it
-        .set_namespace("myapp")               // specify metrics namespace, default is "stats"
-        .track_default_metrics(metrics::all); // track default system and process metrics
-~~~
-
-Now you can start tracking the metrics.
+That's it, you are ready to start tracking the metrics (assuming that the server
+is running). Of course, [additional client settings](docs/setting_up_client.md) 
+can be specified.
 
 The server can easily be hosted in the same process. For more details check
 '[Running the server](docs/running_server.md)'.
@@ -77,7 +67,7 @@ void test_fn_0()
 {
     int time = get_time_ms();
     // do something lengthy
-    metrics::measure("app.fn.duration", get_time_ms - time);
+    metrics::measure("app.fn.duration", get_time_ms() - time);
 }
 
 // simpler:
@@ -85,7 +75,7 @@ void test_fn_1()
 {
     metrics::auto_timer _("app.fn.duration");
     // do something lengthy
-}   // <- "app.fn.duration" store here when auto_timer destructor is called
+}   // <- "app.fn.duration" stored here when auto_timer destructor is called
 
 // even simpler:
 void test_fn_2()
