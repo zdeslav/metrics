@@ -336,3 +336,29 @@ TEST(ServerTest, ServerEvents) {
 
     EXPECT_TRUE(stop_received);
 }
+
+
+
+//TEST(ServerTest, JsonFileBackend) {
+//	metrics::json_file_backend jfb = metrics::json_file_backend("test.json");
+//
+//	int arr1[] = { 17, 13, 15, 16, 18 }; // VS2010 doesn't support initializer lists
+//	int arr2[] = { 1, 2, 3 };
+//	auto vec1 = std::vector<int>(std::begin(arr1), std::end(arr1));
+//	auto vec2 = std::vector<int>(std::begin(arr2), std::end(arr2));
+//
+//	metrics::storage store;
+//
+//	store.counters["c.1"] = 5;
+//	store.counters["c.2"] = 10;
+//
+//	store.gauges["g.1"] = 42;
+//	store.gauges["g.2"] = 999;
+//
+//	store.timers["t.1"] = vec1;
+//	store.timers["t.2"] = vec2;
+//
+//	auto stats = metrics::flush_metrics(store, 10000);
+//
+//	jfb(stats);
+//}

@@ -34,6 +34,28 @@ namespace metrics
         void operator()(const stats& stats);
     };
 
+	/// Simple backend that dums stats to JSON file. 
+	class json_file_backend
+	{
+		std::string m_filename;
+	public:
+		/**
+		* Creates an instance of json_file_backend
+		* @param filename name of the file where stats will be written
+		*/
+		json_file_backend(const char* filename) : m_filename(filename){ ; }
+		/**
+		* Dumps the provided statistics data to file
+		* @param stats Statistic data resulting from last flush
+		*/
+		void operator()(const stats& stats);
+	private:
+		std::string to_quoted_string(const char *value);
+		static bool contains_control_character(const char* str);
+		static bool is_control_character(char ch);
+		static std::string double_to_string(double value);
+	};
+
     /*
     class event_log_backend
     {
